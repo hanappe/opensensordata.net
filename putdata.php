@@ -116,11 +116,12 @@ function get_value($s, $linenum)
 {
         $t = trim($s);
         if ($t == '')
-                //badRequest("Line $linenum: Empty value");
-                return null;
+                return false;
         else if (is_numeric($t)) 
                 return (float) $t;
-        else return $t;
+        else if ($t == "null") 
+                return "NULL";
+        else return false;
 }
 
 function get_longitude($s, $linenum)
@@ -248,7 +249,7 @@ for ($i = 0; $i < count($lines); $i++) {
                 $timestamp = get_timestamp($currentLine[1], $i);
 
                 $value = get_value($currentLine[2], $i);
-                if ($value === null) {
+                if ($value === false) {
                         $count_emptyvalues++;
                         continue;
                 }
