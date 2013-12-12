@@ -20,7 +20,7 @@ class="cmti-12">free beer</span>). And the software is Free (like in <span
 class="cmti-12">freedom</span>), under the
 <a 
 href="http://www.gnu.org/licenses/gpl.html" >GPLv3</a>. You can <a 
-href="latest.tar.gz" >download the code</a> and install it on your own servers
+href="https://github.com/hanappe/opensensordata.net" >download the code</a> and install it on your own servers
 (requirements: Apache/PHP/MySQL).
    </p> 
 
