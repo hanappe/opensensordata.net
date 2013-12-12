@@ -1,0 +1,76 @@
+Options -MultiViews
+RewriteEngine On
+RewriteBase /
+
+RewriteRule ^upload(.*)$  putdata.php$1
+RewriteRule ^viewdata/(.*)$  viewdata.php?path=$1
+RewriteRule ^viewgroup/(.*)$  viewgroup.php?path=$1
+
+
+RewriteCond %{REQUEST_METHOD} PUT
+RewriteRule ^groups/$  putgroup.php
+
+RewriteCond %{REQUEST_METHOD} GET
+RewriteRule ^groups/(.*).json$  getgroup.php?path=$1.json
+
+
+RewriteCond %{REQUEST_METHOD} PUT
+RewriteRule ^datastreams/$  putdatastream.php
+
+RewriteCond %{REQUEST_METHOD} GET
+RewriteRule ^datastreams/(.*).csv?$  getdata.php?path=$1.csv
+
+RewriteCond %{REQUEST_METHOD} GET
+RewriteRule ^datastreams/(.*).json?$  getdatastream.php?path=$1.json
+
+
+
+RewriteCond %{REQUEST_METHOD} GET
+RewriteRule ^datapoints/(.*).csv?$  getdata.php?path=$1.csv
+
+RewriteCond %{REQUEST_METHOD} GET
+RewriteRule ^datapoints/(.*).json?$  getdata.php?path=$1.json
+
+
+
+RewriteCond %{REQUEST_METHOD} PUT
+RewriteRule ^photostreams/$  putphotostream.php
+
+RewriteCond %{REQUEST_METHOD} GET
+RewriteRule ^photostreams/(.*).json?$  getphotostream.php?path=$1.json
+
+RewriteCond %{REQUEST_METHOD} GET
+RewriteRule ^photos/(.*)  getphotos.php?path=$1
+
+
+RewriteCond %{REQUEST_METHOD} PUT
+RewriteRule ^photo/(.*)$  putphoto.php?path=$1
+
+RewriteCond %{REQUEST_METHOD} POST
+RewriteRule ^photo/(.*)$  putphoto.php?path=$1
+
+RewriteCond %{REQUEST_METHOD} GET
+RewriteRule ^photo/(.*)   getphoto.php?path=$1
+
+
+RewriteCond %{REQUEST_METHOD} GET
+RewriteRule ^account.json(.*)$  getaccount.php$1
+
+RewriteCond %{REQUEST_METHOD} GET
+RewriteRule ^accounts/(.*).html?$  getaccount.php?name=$1&format=html
+
+RewriteCond %{REQUEST_METHOD} GET
+RewriteRule ^accounts/(.*).json?$  getaccount.php?name=$1&format=json
+
+RewriteCond %{REQUEST_METHOD} POST
+RewriteRule ^accounts/(.*)/?$  getaccount.php?name=$1
+
+RewriteCond %{REQUEST_METHOD} PUT
+RewriteRule ^accounts/$  putaccount.php
+
+RewriteCond %{REQUEST_METHOD} PUT
+RewriteRule ^accounts$  putaccount.php
+
+
+RewriteCond %{REQUEST_METHOD} GET
+RewriteRule ^apps/(.*).json?$  getapp.php?path=$1.json
