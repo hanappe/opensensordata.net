@@ -208,7 +208,8 @@ class Datastream
         public static function to_filter_query($sel, $points)
         {
                 if ($sel->date != NULL) {
-                        $delta = 86400 / $points;
+                        $diff = 86400;
+                        $delta = $diff / $points;
                 } else if (($sel->from != NULL) 
                            && ($sel->to != NULL)) {
                         $diff = $sel->from->diff($sel->to);
@@ -220,6 +221,8 @@ class Datastream
                         }
                         $delta = $diff / $points;
                 }
+
+                echo "points=$points, diff=$diff, delta=$delta\n";
 
                 $query = "SELECT UNIX_TIMESTAMP(`datetime`) as `timestamp`,"
                         . "ROUND(UNIX_TIMESTAMP(`datetime`)/$delta) AS timekey,"
