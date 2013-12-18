@@ -72,7 +72,7 @@ class AccountStats
                 $this->photo_maxuploads = $max_weekly_photo_uploads;
 
                 $query = ("INSERT INTO account_stats VALUES (" 
-                          . $mysqli->real_escape_string($id) 
+                          . $mysqli->real_escape_string($id) . ", "
                           . $mysqli->real_escape_string($this->data_maxuploads) 
                           . ", 0, 0, " 
                           . $mysqli->real_escape_string($this->photo_maxuploads) 
@@ -108,7 +108,7 @@ class AccountStats
 
                 $res = $mysqli->query($query);
                 if ($mysqli->errno) {
-                        //echo $mysqli->error . "<br/>\n";
+                        $this->err = $mysqli->error;
                         return false;
                 }
 
