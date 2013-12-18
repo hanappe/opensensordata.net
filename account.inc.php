@@ -28,6 +28,7 @@ require_once "db.inc.php";
 require_once "input.inc.php";
 require_once "datastream.inc.php";
 require_once "photostream.inc.php";
+require_once "account_stats.inc.php";
 
 $account = NULL;
 
@@ -112,6 +113,7 @@ class Account
         public $key;
         public $validated;
         public $code;
+        public $err;
 
         public function load($field, $value) 
         {
@@ -191,11 +193,20 @@ class Account
 
                 $res = $mysqli->query($query);
                 if ($mysqli->errno) {
-                        //echo $mysqli->error . "<br/>\n";
+                        $this->err = $mysqli->error;
                         return false;
                 }
 
                 $this->id = $mysqli->insert_id;
+
+                $stats = new AccountStats();
+                $stats->data_maxuploads = -1;
+                $stats->photo_maxuploads = -1;
+                if (!$stats->create($this->id)) {
+                        $this->err = $stats->err;
+                        return false;
+                }
+
                 return true;
         }
 
@@ -211,7 +222,7 @@ class Account
 
                 $res = $mysqli->query($query);
                 if ($mysqli->errno) {
-                        //echo $mysqli->error . "<br/>\n";
+                        $this->err = $mysqli->error;
                         return false;
                 }
 

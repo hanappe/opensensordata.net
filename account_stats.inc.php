@@ -36,6 +36,7 @@ class AccountStats
         public $photo_maxuploads;
         public $photo_uploads = 0;
         public $photo_curweek = 0;
+        public $err;
 
         public function load($id) 
         {
@@ -47,7 +48,9 @@ class AccountStats
                 //echo $query . "<br/>\n";
 
                 $res = $mysqli->query($query);
-                if (!$res || ($res->num_rows != 1)) return false;
+                if (!$res || ($res->num_rows != 1)) 
+                        return false;
+
                 $row = $res->fetch_assoc();
 
                 $this->id = $row['aid'];
@@ -79,7 +82,7 @@ class AccountStats
 
                 $res = $mysqli->query($query);
                 if ($mysqli->errno) {
-                        //echo $mysqli->error . "<br/>\n";
+                        $this->err = $mysqli->error;
                         return false;
                 }
 

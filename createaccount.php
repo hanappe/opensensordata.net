@@ -99,7 +99,7 @@ if ($op == 'create') {
         $account->generateCode();
 
         if (!$account->create()) 
-                internalServerError("Create: Database error");
+                internalServerError("Create: Database error: " . $account->err);
 
 
         $app = new App();

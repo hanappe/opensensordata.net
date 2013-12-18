@@ -33,6 +33,10 @@ require_once "selector.model.php";
 
 function printCSVDatapoint($row, $d, $geolocated)
 {
+        $value = $row['value'];
+        if ($value == null)
+                $value = "null";
+
         if ($geolocated) {
                 $longitude = $row['longitude'];
                 if (!$longitude)
@@ -49,20 +53,24 @@ function printCSVDatapoint($row, $d, $geolocated)
                 echo sprintf("%04d/%02d/%02d %02d:%02d:%02d,%s,%f,%f\n",
                              $d->year, $d->month, $d->day, 
                              $d->hour, $d->minute, $d->second,
-                             $row['value'], 
+                             $value, 
                              $longitude, $latitude);
 
         } else {
                 echo sprintf("%04d/%02d/%02d %02d:%02d:%02d,%s\n",
                              $d->year, $d->month, $d->day, 
                              $d->hour, $d->minute, $d->second,
-                             $row['value']);
+                             $value);
 
         }
 }
 
 function printJSONDatapoint($row, $d, $geolocated, $last)
 {
+        $value = $row['value'];
+        if ($value == null)
+                $value = "null";
+
         if ($geolocated) {
                 $longitude = $row['longitude'];
                 if (!$longitude)
@@ -79,14 +87,14 @@ function printJSONDatapoint($row, $d, $geolocated, $last)
                 echo sprintf("[\"%04d/%02d/%02d %02d:%02d:%02d\",%s,%f,%f]",
                              $d->year, $d->month, $d->day, 
                              $d->hour, $d->minute, $d->second,
-                             $row['value'], 
+                             $value, 
                              $longitude, $latitude);
 
         } else {
                 echo sprintf("[\"%04d/%02d/%02d %02d:%02d:%02d\",%s]",
                              $d->year, $d->month, $d->day, 
                              $d->hour, $d->minute, $d->second,
-                             $row['value']);
+                             $value);
         }
 
         if (!$last) echo ",\n"; 
