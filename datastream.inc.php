@@ -227,7 +227,7 @@ class Datastream
                         else $delta = $diff / $points;
                 }
 
-                echo "points=$points, diff=$diff, delta=$delta\n";
+                //echo "points=$points, diff=$diff, delta=$delta\n";
 
                 $query = "SELECT UNIX_TIMESTAMP(`datetime`) as `timestamp`,"
                         . "ROUND(UNIX_TIMESTAMP(`datetime`)/$delta) AS timekey,"
@@ -264,7 +264,7 @@ class Datastream
 
                 $query .= " GROUP BY timekey ORDER BY `datetime`";
 
-                echo $query; 
+                //echo $query; 
 
                 return $query;
         }
