@@ -128,7 +128,7 @@ function printDatapoints($results, $timeformat, $default_timezone,
                         $osddatetime->import($row);
                         $last = ($i == $results->num_rows - 1);
                         if (($i > 0) && ($row['timestamp'] - $last_stamp > $delta)) {
-                                echo sprintf("[\"%04d/%02d/%02d %02d:%02d:%02d\",null],",
+                                echo sprintf("[\"%04d/%02d/%02d %02d:%02d:%02d\",[null,null,null]],",
                                              $osddatetime->year, $osddatetime->month, $osddatetime->day, 
                                              $osddatetime->hour, $osddatetime->minute, $osddatetime->second);
                         } 
