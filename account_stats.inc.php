@@ -86,7 +86,6 @@ class AccountStats
                         return false;
                 }
 
-                $this->id = $mysqli->insert_id;
                 return true;
         }
 
