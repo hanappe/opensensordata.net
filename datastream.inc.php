@@ -212,7 +212,7 @@ class Datastream
                         $delta = $diff / $points;
                 } else if (($sel->from != NULL) 
                            && ($sel->to != NULL)) {
-                        $diff = $sel->from->diff($sel->to);
+                        $diff = $sel->to->diff($sel->from);
                         if ($diff < 0) {
                                 $tmp = $sel->from;
                                 $sel->from = $sel->to;
