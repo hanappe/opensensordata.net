@@ -51,7 +51,7 @@ $idmap = array();
 $stats = new AccountStats();
 if (!$stats->load($account->id) && !$stats->create($account->id)) {
         internalServerError("The access to the account statistics failed: "
-                            . $account->err);
+                            . $stats->err);
 }
 
 $curweek = (int) date("YW");
