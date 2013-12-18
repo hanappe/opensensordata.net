@@ -205,28 +205,8 @@ class Datastream
                 return $query;
         }
 
-        public static function to_filter_query($sel, $points)
+        public static function to_filter_query($sel, $delta)
         {
-                if ($sel->date != NULL) {
-                        $diff = 86400;
-                        $delta = $diff / $points;
-                } else if (($sel->from != NULL) 
-                           && ($sel->to != NULL)) {
-                        $diff = $sel->to->diff($sel->from);
-                        if ($diff < 0) {
-                                $tmp = $sel->from;
-                                $sel->from = $sel->to;
-                                $sel->to = $tmp;
-                                $diff = -$diff;
-                        }
-                        if (!$sel->to->has_time()) {
-                                $diff += 86400;
-                        }
-                        if ($diff == 0)
-                                $delta = 1;
-                        else $delta = $diff / $points;
-                }
-
                 //echo "points=$points, diff=$diff, delta=$delta\n";
 
                 $query = "SELECT UNIX_TIMESTAMP(`datetime`) as `timestamp`,"

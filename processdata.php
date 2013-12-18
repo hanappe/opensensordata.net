@@ -127,7 +127,7 @@ function printDatapoints($results, $timeformat, $default_timezone,
                         $row = $results->fetch_assoc();
                         $osddatetime->import($row);
                         $last = ($i == $results->num_rows - 1);
-                        if (($i > 0) && ($row['timestamp'] - $last_stamp > 3600)) {
+                        if (($i > 0) && ($row['timestamp'] - $last_stamp > $delta)) {
                                 echo sprintf("[\"%04d/%02d/%02d %02d:%02d:%02d\",null],",
                                              $osddatetime->year, $osddatetime->month, $osddatetime->day, 
                                              $osddatetime->hour, $osddatetime->minute, $osddatetime->second);
@@ -166,7 +166,27 @@ header('Access-Control-Allow-Origin: *');
 
 $points = 1000;
 
-$query = Datastream::to_filter_query($selector, $points);
+if ($selector->date != NULL) {
+        $diff = 86400;
+        $delta = $diff / $points;
+ } else if (($selector->from != NULL) 
+            && ($selector->to != NULL)) {
+        $diff = $selector->to->diff($selector->from);
+        if ($diff < 0) {
+                $tmp = $selector->from;
+                $selector->from = $selector->to;
+                $selector->to = $tmp;
+                $diff = -$diff;
+        }
+        if (!$selector->to->has_time()) {
+                $diff += 86400;
+        }
+        if ($diff == 0)
+                $delta = 1;
+        else $delta = $diff / $points;
+ }
+
+$query = Datastream::to_filter_query($selector, $delta);
 $filename = $selector->to_filename("datastream");
         
 $results = $mysqli->query($query);
@@ -177,7 +197,7 @@ if (!$results) {
 //echo $query . "\n";
 printDatapoints($results, $timeformat, 
                 $datastream->timezone, $geolocated, 
-                $filename, $selector->format, 60);
+                $filename, $selector->format, $delta);
 
 db_close();
 
