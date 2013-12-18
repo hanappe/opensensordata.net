@@ -26,7 +26,6 @@
 require_once "error.inc.php";
 require_once "db.inc.php";
 require_once "input.inc.php";
-require_once "output.inc.php";
 require_once "datastream.inc.php";
 require_once "selector.model.php";
 
