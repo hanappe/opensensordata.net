@@ -213,13 +213,18 @@ class Datastream
                 } else if (($sel->from != NULL) 
                            && ($sel->to != NULL)) {
                         $diff = $sel->from->diff($sel->to);
-                        if ($diff <= 0) {
+                        if ($diff < 0) {
                                 $tmp = $sel->from;
                                 $sel->from = $sel->to;
                                 $sel->to = $tmp;
                                 $diff = -$diff;
                         }
-                        $delta = $diff / $points;
+                        if (!$sel->to->has_time()) {
+                                $diff += 86400;
+                        }
+                        if ($diff == 0)
+                                $delta = 1;
+                        else $delta = $diff / $points;
                 }
 
                 echo "points=$points, diff=$diff, delta=$delta\n";
