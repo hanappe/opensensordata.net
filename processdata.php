@@ -90,14 +90,14 @@ function printJSONDatapoint($row, $d, $geolocated, $last)
                              $longitude, $latitude);
 
         } else {
-                echo sprintf("[\"%04d/%02d/%02d %02d:%02d:%02d\",%s]",
-                             $d->year, $d->month, $d->day, 
-                             $d->hour, $d->minute, $d->second,
-                             $value);
-                /* echo sprintf("[\"%04d/%02d/%02d %02d:%02d:%02d\",[%s,%s,%s]]", */
+                /* echo sprintf("[\"%04d/%02d/%02d %02d:%02d:%02d\",%s]", */
                 /*              $d->year, $d->month, $d->day,  */
                 /*              $d->hour, $d->minute, $d->second, */
-                /*              $row['min'], $row['avg'], $row['max']); */
+                /*              $value); */
+                echo sprintf("[\"%04d/%02d/%02d %02d:%02d:%02d\",[%s,%s,%s]]",
+                             $d->year, $d->month, $d->day,
+                             $d->hour, $d->minute, $d->second,
+                             $row['min'], $row['avg'], $row['max']);
         }
 
         if (!$last) echo ",\n"; 
