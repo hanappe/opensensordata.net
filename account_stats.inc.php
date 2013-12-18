@@ -82,7 +82,7 @@ class AccountStats
 
                 $res = $mysqli->query($query);
                 if ($mysqli->errno) {
-                        $this->err = $mysqli->error;
+                        $this->err = $query . ": " . $mysqli->error;
                         return false;
                 }
 
