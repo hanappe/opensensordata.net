@@ -200,8 +200,6 @@ class Account
                 $this->id = $mysqli->insert_id;
 
                 $stats = new AccountStats();
-                $stats->data_maxuploads = -1;
-                $stats->photo_maxuploads = -1;
                 if (!$stats->create($this->id)) {
                         $this->err = $stats->err;
                         return false;

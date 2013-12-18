@@ -164,9 +164,9 @@ if (!$datastream->load($selector->id))
 
 header('Access-Control-Allow-Origin: *');
 
-$delta = 5;
+$points = 1000;
 
-$query = Datastream::to_filter_query($selector, $delta);
+$query = Datastream::to_filter_query($selector, $points);
 $filename = $selector->to_filename("datastream");
         
 $results = $mysqli->query($query);

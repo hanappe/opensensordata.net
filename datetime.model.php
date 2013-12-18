@@ -103,9 +103,24 @@ class OSDDateTime
                 return $this->err? false : true;
         }
 
-        public function has_time()
+        public function has_time($d)
         {
                 return $this->hour != NULL;
+        }
+
+        public function diff($date)
+        {
+                $d1 = new DateTime();
+                $d1->setDate($this->year, $this->month, $this->day); 
+                $d1->setTime($this->hour, $this->minute, $this->second); 
+                // timezone
+
+                $d2 = new DateTime();
+                $d2->setDate($date->year, $date->month, $date->day); 
+                $d2->setTime($date->hour, $date->minute, $date->second); 
+                // timezone
+
+                return $d1->diff($d2);
         }
 
         public static function _format($format, 

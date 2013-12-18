@@ -205,8 +205,22 @@ class Datastream
                 return $query;
         }
 
-        public static function to_filter_query($sel, $delta)
+        public static function to_filter_query($sel, $points)
         {
+                if ($sel->date != NULL) {
+                        $delta = 86400 / $points;
+                } else if (($sel->from != NULL) 
+                           && ($sel->to != NULL)) {
+                        $diff = $sel->from->diff($sel->to);
+                        if ($diff <= 0) {
+                                $tmp = $sel->from;
+                                $sel->from = $sel->to;
+                                $sel->to = $tmp;
+                                $diff = -$diff;
+                        }
+                        $delta = $diff / $points;
+                }
+
                 $query = "SELECT UNIX_TIMESTAMP(`datetime`) as `timestamp`,"
                         . "ROUND(UNIX_TIMESTAMP(`datetime`)/($delta * 60)) AS timekey,"
                         . "MIN(value) as min, MAX(value) as max, AVG(value) as avg, "
@@ -214,6 +228,7 @@ class Datastream
                         . "FROM datapoints WHERE datastream=" . $sel->id;
 
                 if ($sel->date != NULL) {
+
                         if ($sel->date->has_time()) {
                                 $query .= sprintf(" AND `datetime` = '%s'", 
                                                   $sel->date->format("Y-m-d H:M:S"));
