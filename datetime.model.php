@@ -120,7 +120,7 @@ class OSDDateTime
                 $d2->setTime($date->hour, $date->minute, $date->second); 
                 // timezone
 
-                return $d1->diff($d2);
+                return $d1->getTimestamp() - $d2->getTimestamp();
         }
 
         public static function _format($format, 
