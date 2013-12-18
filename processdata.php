@@ -197,7 +197,7 @@ if (!$results) {
 //echo $query . "\n";
 printDatapoints($results, $timeformat, 
                 $datastream->timezone, $geolocated, 
-                $filename, $selector->format, $delta);
+                $filename, $selector->format, 2 * $delta);
 
 db_close();
 
