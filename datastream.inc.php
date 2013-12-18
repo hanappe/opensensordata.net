@@ -256,7 +256,7 @@ class Datastream
 
                 $query .= " GROUP BY timekey ORDER BY `datetime`";
 
-                //echo $query; 
+                echo $query; 
 
                 return $query;
         }
