@@ -222,7 +222,7 @@ class Datastream
                 }
 
                 $query = "SELECT UNIX_TIMESTAMP(`datetime`) as `timestamp`,"
-                        . "ROUND(UNIX_TIMESTAMP(`datetime`)/($delta * 60)) AS timekey,"
+                        . "ROUND(UNIX_TIMESTAMP(`datetime`)/$delta) AS timekey,"
                         . "MIN(value) as min, MAX(value) as max, AVG(value) as avg, "
                         . "`datetime`,`longitude`,`latitude`,`value` "
                         . "FROM datapoints WHERE datastream=" . $sel->id;
