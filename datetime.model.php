@@ -103,7 +103,7 @@ class OSDDateTime
                 return $this->err? false : true;
         }
 
-        public function has_time($d)
+        public function has_time()
         {
                 return $this->hour != NULL;
         }
