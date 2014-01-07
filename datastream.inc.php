@@ -205,6 +205,41 @@ class Datastream
                 return $query;
         }
 
+        public static function to_count_query($sel)
+        {
+                $query = "SELECT COUNT(*) as count FROM datapoints WHERE datastream=" . $sel->id;
+
+                if ($sel->date != NULL) {
+                        if ($sel->date->has_time()) {
+                                $query .= sprintf(" AND `datetime` = '%s'", 
+                                                  $sel->date->format("Y-m-d H:M:S"));
+                        } else {
+                                $query .= sprintf(" AND date(`datetime`) = '%s'", 
+                                                  $sel->date->format("Y-m-d"));
+                        }
+                } else if (($sel->from != NULL) 
+                           && ($sel->to != NULL)) {
+                        if ($sel->from->has_time()) {
+                                $query .= sprintf(" AND `datetime` >= '%s'", 
+                                                  $sel->from->format("Y-m-d H:M:S"));
+                        } else {
+                                $query .= sprintf(" AND date(`datetime`) >= '%s'", 
+                                                  $sel->from->format("Y-m-d"));
+                        }
+                        if ($sel->from->has_time()) {
+                                $query .= sprintf(" AND `datetime` <= '%s'", 
+                                                  $sel->to->format("Y-m-d H:M:S"));
+                        } else {
+                                $query .= sprintf(" AND date(`datetime`) <= '%s'", 
+                                                  $sel->to->format("Y-m-d"));
+                        }
+                }
+
+                //echo $query; exit(0);
+
+                return $query;
+        }
+
         public static function to_filter_query($sel, $delta)
         {
                 //echo "points=$points, diff=$diff, delta=$delta\n";
