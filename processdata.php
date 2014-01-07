@@ -166,13 +166,13 @@ header('Access-Control-Allow-Origin: *');
 
 $points = 1000;
 
-$query = Datastream::to_count_query($selector);
-$results = $mysqli->query($query);
-if (!$results) {
-        internalServerError("Failed to read the datapoints, Query: " . $query);
-}
-$row = $results->fetch_assoc();
-$count = $row['count'];
+/* $query = Datastream::to_count_query($selector); */
+/* $results = $mysqli->query($query); */
+/* if (!$results) { */
+/*         internalServerError("Failed to read the datapoints, Query: " . $query); */
+/* } */
+/* $row = $results->fetch_assoc(); */
+/* $count = $row['count']; */
 
 if ($selector->date != NULL) {
         $diff = 86400;
@@ -196,10 +196,10 @@ if ($selector->date != NULL) {
         $blank = 3 * $delta;
  }
 
-if ($count < 5 * $points) {
-        $delta = 1;
-        $blank = 3 * $diff / $count;
-}
+/* if ($count < 5 * $points) { */
+/*         $delta = 1; */
+/*         $blank = 3 * $diff / $count; */
+/* } */
 
 $query = Datastream::to_filter_query($selector, $delta);
 $filename = $selector->to_filename("datastream");
