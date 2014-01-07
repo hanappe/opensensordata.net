@@ -113,7 +113,7 @@ if (isset($input->datastreams)) {
                 $d = $input->datastreams[$i];
                 $datastream = new Datastream();
 
-                if ($d->id) {
+                if (isset($d->id)) {
                         if (!$datastream->load($d->id)) 
                                 badRequest("Invalid ID: " . $d->id);
                 } else {
@@ -180,10 +180,10 @@ if (isset($input->datastreams)) {
                                         internalServerError("Update of datastream failed: "
                                                             . $datastream->name);
                         }
-                } else if ($datastream->loadIdUsingOwnerAndName($account->id, $datastream->name)) {
-                        if (!$datastream->update())
-                                internalServerError("Update of datastream failed: "
-                                                    . $datastream->name);
+//                } else if ($datastream->loadIdUsingOwnerAndName($account->id, $datastream->name)) {
+//                        if (!$datastream->update())
+//                                internalServerError("Update of datastream failed: "
+//                                                    . $datastream->name);
                 } else {
                         if (!$datastream->create())
                                 internalServerError("Failed to create the datastream " 
