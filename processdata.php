@@ -174,11 +174,10 @@ if (!$results) {
 $row = $results->fetch_assoc();
 $count = $row['count'];
 
-if ($count < 5 * $points) {
-        $delta = 1;
-} else if ($selector->date != NULL) {
+if ($selector->date != NULL) {
         $diff = 86400;
         $delta = $diff / $points;
+        $blank = 3600;
  } else if (($selector->from != NULL) 
             && ($selector->to != NULL)) {
         $diff = $selector->to->diff($selector->from);
@@ -194,7 +193,13 @@ if ($count < 5 * $points) {
         if ($diff == 0)
                 $delta = 1;
         else $delta = $diff / $points;
+        $blank = 3 * $delta;
  }
+
+if ($count < 5 * $points) {
+        $delta = 1;
+        $blank = 3 * $diff / $count;
+}
 
 $query = Datastream::to_filter_query($selector, $delta);
 $filename = $selector->to_filename("datastream");
@@ -207,7 +212,7 @@ if (!$results) {
 //echo $query . "\n";
 printDatapoints($results, $timeformat, 
                 $datastream->timezone, $geolocated, 
-                $filename, $selector->format, 2 * $delta);
+                $filename, $selector->format, $blank);
 
 db_close();
 
