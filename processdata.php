@@ -166,7 +166,17 @@ header('Access-Control-Allow-Origin: *');
 
 $points = 1000;
 
-if ($selector->date != NULL) {
+$query = Datastream::to_count_query($selector);
+$results = $mysqli->query($query);
+if (!$results) {
+        internalServerError("Failed to read the datapoints, Query: " . $query);
+}
+$row = $results->fetch_assoc();
+$count = $row['count'];
+
+if ($count < 5 * $points) {
+        $delta = 1;
+} else if ($selector->date != NULL) {
         $diff = 86400;
         $delta = $diff / $points;
  } else if (($selector->from != NULL) 
