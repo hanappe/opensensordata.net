@@ -34,6 +34,9 @@ RewriteRule ^datapoints/(.*).json?$  getdata.php?path=$1.json
 RewriteCond %{REQUEST_METHOD} GET
 RewriteRule ^filter/(.*)/(.*).json?$  processdata.php?script=$1&path=$2.json
 
+RewriteCond %{REQUEST_METHOD} GET
+RewriteRule ^count/(.*)/(.*).json?$  countdata.php?script=$1&path=$2.json
+
 
 RewriteCond %{REQUEST_METHOD} PUT
 RewriteRule ^photostreams/$  putphotostream.php
