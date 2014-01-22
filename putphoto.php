@@ -63,7 +63,11 @@ if (!$fp) {
 }
 //fwrite($fp, file_get_contents('php://input'));
 $data = file_get_contents('php://input');
-$image = base64_decode($data);
+if ($_SERVER["CONTENT_TYPE"] == "image/jpeg") {
+        $image = $data;
+} else {
+        $image = base64_decode($data);
+}
 fwrite($fp, $image);
 fclose($fp);
 
