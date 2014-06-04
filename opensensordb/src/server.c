@@ -24,40 +24,44 @@ static int port = 10081;
 static int nodaemon = 0;
 static int serverSocket = -1;
 
-static pathnode_t* new_pathnode(const char* name)
+pair_t* new_pair(char* name, char* value)
 {
-        pathnode_t* node = (pathnode_t*) malloc(sizeof(pathnode_t));
-        if (node == NULL) {
-                log_err("new_pathnode: Out of memory");
+        pair_t* p = (pair_t*) malloc(sizeof(pair_t));
+        if (p == NULL) {
+                log_err("Out of memory");
                 return NULL;
         }
+        p->name = name;
+        p->value = value;
+        return p;
+} 
 
-        node->name = strdup(name);
-        if (node->name == NULL) {
-                free(node);
-                log_err("new_pathnode: Out of memory");
+pair_t* new_pair_dup(char* name, char* value)
+{
+        pair_t* p = (pair_t*) malloc(sizeof(pair_t));
+        if (p == NULL) {
+                log_err("Out of memory");
                 return NULL;
-        } 
-        node->next = NULL;
-        return node;
-}
-
-static void delete_pathnode(pathnode_t* node)
-{
-        free(node->name);
-        free(node);
-}
-
-static void delete_pathnodes(pathnode_t* node)
-{
-        while (node) {
-                pathnode_t* next = node->next;
-                delete_pathnode(node);
-                node = next;
         }
+        p->name = (p->name != NULL)? strdup(name) : NULL;
+        p->value = (p->value != NULL)? strdup(value) : NULL;
+        if ((p->name == NULL) || (p->value == NULL)) {
+                log_err("Out of memory");
+                free(p);
+                if (p->name) free(p->name);
+                return NULL;
+        }
+        return p;
+} 
+
+void delete_pair(pair_t* p)
+{
+        free(p->name);
+        free(p->value);
+        free(p);
 }
 
-int path_parse(const char* path, pathnode_t** nodes)
+int path_parse(const char* path, list_t** nodes)
 {
         enum {
                 PATH_START,
@@ -65,8 +69,7 @@ int path_parse(const char* path, pathnode_t** nodes)
                 PATH_NAME
         };
         
-        pathnode_t* node = NULL;
-        pathnode_t* cur = NULL;
+        list_t* node = NULL;
         int state = PATH_START;
         int len = strlen(path);
         char buffer[256];
@@ -82,14 +85,13 @@ int path_parse(const char* path, pathnode_t** nodes)
 
                         } else if (state == PATH_NAME) {
                                 buffer[index] = 0;
-                                pathnode_t* n = new_pathnode(buffer);
-
-                                if (node == NULL)
-                                        node = cur = n;
-                                else {
-                                        cur->next = n;
-                                        cur = n;
+                                char* s = strdup(buffer);
+                                if (s == NULL) {
+                                        log_err("Out of memory");
+                                        delete_list(node);
+                                        return -1;
                                 }
+                                node = list_append(node, s);
                                 state = PATH_SLASH;
                                         
                         } else if (state == PATH_SLASH) {
@@ -105,7 +107,7 @@ int path_parse(const char* path, pathnode_t** nodes)
                                 if (index < 255) {
                                         buffer[index++] = c;
                                 } else {
-                                        delete_pathnodes(node);
+                                        delete_list(node);
                                         log_warn("Invalid path: %s", path);
                                         return -1;
                                 }
@@ -230,16 +232,78 @@ static void closeClient(int clientSocket)
 
 void request_clear(request_t* request)
 {
+        list_t* n;
+
         if (request->path) 
                 free(request->path);
-        if (request->pathnodes) 
-                delete_pathnodes(request->pathnodes);
+
+        n = request->pathnodes;
+        while (n) {
+                free(n->data);
+                n = n->next;
+        }
+        delete_list(request->pathnodes);
+
+        n = request->args;
+        while (n) {
+                delete_pair((pair_t*)n->data);
+                n = n->next;
+        }
+        delete_list(request->args);
+
+        n = request->headers;
+        while (n) {
+                delete_pair((pair_t*)n->data);
+                n = n->next;
+        }
+        delete_list(request->headers);
+
+        if (request->buf) 
+                free(request->buf);
+
         memset(request, 0, sizeof(request_t));
+}
+
+int request_append(request_t* request, char c)
+{
+        if (request->count >= request->size) {
+                int newsize = 1024 + 2 * request->size;
+                request->buf = realloc(request->buf, newsize);
+                if (request->buf == NULL) {
+                        log_err("Daemon: Out of memory\n");
+                        request_clear(request);
+                        return -1;
+                }
+                request->size = newsize;
+        }
+        request->buf[request->count++] = c;
+        return 0;
+}
+
+int request_content_length(request_t* request)
+{
+        list_t* n = request->headers;
+        while (n) {
+                pair_t* p = (pair_t*) n->data;
+                if (strcmp(p->name, "Content-Length") == 0) {
+                        if (p->value == NULL)
+                                return -1;
+                        int count = strlen(p->value); 
+                        if (count == 0)
+                                return -1;
+                        for (int i = 0; i < count; i++) {
+                                if ((p->value[i] < '0') || (p->value[i] > '9')) 
+                                        return -1;
+                        }
+                        return atoi(p->value);
+                }
+        }
+        return 0;
 }
 
 void response_clear(response_t* response)
 {
-        if (response->buf) 
+        if ((response->mybuf == 0) && (response->buf != NULL)) 
                 free(response->buf);
         memset(response, 0, sizeof(response_t));
 }
@@ -497,7 +561,7 @@ int parseRequest(int client, request_t* req, response_t* resp)
                 REQ_HEADER_VALUE,
                 REQ_HEADER_LF,
                 REQ_HEADERS_END_LF,
-                REQ_HEADERS_END,
+                REQ_BODY,
         };
 
 #define BUFLEN 512
@@ -506,15 +570,27 @@ int parseRequest(int client, request_t* req, response_t* resp)
         int count = 0;
         char c;
         int r;
+        pair_t* p;
 
         while (1) {
-                
-                if (state == REQ_HEADERS_END)
-                        return 0;
 
+                if (state == REQ_BODY)
+                        break;
+                
                 r = read(client, &c, 1);
-                if ((r == -1) || (r == 0)) {
-                        log_warn("Daemon: Failed to parse the request\n");
+                
+                if (r == 0) {
+                        if (state == REQ_BODY)
+                                return 0;
+                        else {
+                                log_err("Daemon: Unexpected end of request");
+                                resp->status = 400;
+                                return -1;
+                        }
+                }
+                if (r == -1) {
+                        log_err("Daemon: Failed to parse the request");
+                        resp->status = 400;
                         return -1;
                 }
                 
@@ -525,6 +601,10 @@ int parseRequest(int client, request_t* req, response_t* resp)
                                 buffer[count] = 0;
                                 if (strcmp(buffer, "GET") == 0)
                                         req->method = HTTP_GET;
+                                else if (strcmp(buffer, "PUT") == 0)
+                                        req->method = HTTP_PUT;
+                                else if (strcmp(buffer, "POST") == 0)
+                                        req->method = HTTP_POST;
                                 else
                                         req->method = HTTP_UNKNOWN;
                                 count = 0;
@@ -588,35 +668,22 @@ int parseRequest(int client, request_t* req, response_t* resp)
                 case REQ_ARGS_NAME: 
                         if (c == ' ') {
                                 buffer[count++] = 0;
-                                if (req->num_args >= REQ_MAX_ARGS) {
-                                        log_warn("Daemon: Too many arguments: %d\n", REQ_MAX_ARGS);
-                                        resp->status = 400;
-                                        return -1;
-                                }
-                                req->names[req->num_args++] = strdup(buffer);
                                 count = 0;
+                                p = new_pair_dup(buffer, NULL);
+                                req->args = list_append(req->args, p);
                                 state = REQ_HTTPVERSION;
                                 
                         } else if (c == '=') {
                                 buffer[count++] = 0;
-                                if (req->num_args >= REQ_MAX_ARGS) {
-                                        log_warn("Daemon: Too many arguments: %d\n", REQ_MAX_ARGS);
-                                        resp->status = 400;
-                                        return -1;
-                                }
-                                req->names[req->num_args] = strdup(buffer);
                                 count = 0;
+                                p = new_pair_dup(buffer, NULL);
                                 state = REQ_ARGS_VALUE;
 
                         } else if (c == '&') {
                                 buffer[count++] = 0;
-                                if (req->num_args >= REQ_MAX_ARGS) {
-                                        log_warn("Daemon: Too many arguments: %d\n", REQ_MAX_ARGS);
-                                        resp->status = 400;
-                                        return -1;
-                                }
-                                req->names[req->num_args++] = strdup(buffer);
                                 count = 0;
+                                p = new_pair_dup(buffer, NULL);
+                                req->args = list_append(req->args, p);
                                 state = REQ_ARGS_NAME;
 
                         } else if ((c == '\r') || (c == '\n')) {
@@ -636,14 +703,22 @@ int parseRequest(int client, request_t* req, response_t* resp)
                 case REQ_ARGS_VALUE: 
                         if (c == ' ') {
                                 buffer[count++] = 0;
-                                req->values[req->num_args++] = strdup(buffer);
                                 count = 0;
+                                p->value = strdup(buffer);
+                                if (p->value == NULL) {
+                                        log_err("Out of memory");
+                                }
+                                req->args = list_append(req->args, p);
                                 state = REQ_HTTPVERSION;
                                 
                         } else if (c == '&') {
                                 buffer[count++] = 0;
-                                req->values[req->num_args++] = strdup(buffer);
                                 count = 0;
+                                p->value = strdup(buffer);
+                                if (p->value == NULL) {
+                                        log_err("Out of memory");
+                                }
+                                req->args = list_append(req->args, p);
                                 state = REQ_ARGS_NAME;
 
                         } else if ((c == '\r') || (c == '\n')) {
@@ -693,18 +768,20 @@ int parseRequest(int client, request_t* req, response_t* resp)
 
                 case REQ_HEADER_NAME: 
                         if ((c == '\n') && (count == 0)) {
-                                state = REQ_HEADERS_END;
+                                state = REQ_BODY;
                                 
                         } else if ((c == '\r') && (count == 0)) {
                                 state = REQ_HEADERS_END_LF;
                                 
                         } else if (c == ':') {
                                 buffer[count++] = 0;
-                                //log_info("Daemon: Header '%s'\n", buffer);
                                 count = 0;
+                                p = new_pair_dup(buffer, NULL);
                                 state = REQ_HEADER_VALUE;
+
                         } else if (count < BUFLEN-1) {
                                 buffer[count++] = (char) c;
+
                         } else {
                                 buffer[BUFLEN-1] = 0;
                                 log_warn("Daemon: Header name too long: %s\n", buffer);
@@ -717,13 +794,20 @@ int parseRequest(int client, request_t* req, response_t* resp)
                         if (c == '\r') {
                                 buffer[count++] = 0;
                                 count = 0;
+                                p->value = strdup(buffer);
+                                req->headers = list_append(req->headers, p);
                                 state = REQ_HEADER_LF;
+
                         } else if (c == '\n') {
                                 buffer[count++] = 0;
                                 count = 0;
+                                p->value = strdup(buffer);
+                                req->headers = list_append(req->headers, p);
                                 state = REQ_HEADER_NAME;
+
                         } else if (count < BUFLEN-1) {
                                 buffer[count++] = (char) c;
+
                         } else {
                                 buffer[BUFLEN-1] = 0;
                                 log_warn("Daemon: Header value too long: %s\n", buffer);
@@ -750,11 +834,26 @@ int parseRequest(int client, request_t* req, response_t* resp)
                                 return -1;
                         } else {
                                 count = 0;
-                                state = REQ_HEADERS_END;
+                                state = REQ_BODY;
                         }
                         break;
                 }
        }
+
+        int content_length = request_content_length(req);
+        if (content_length == -1) {
+                log_err("Failed to determine the content length");
+                resp->status = 400;
+                return -1;
+        }
+
+        for (int i = 0; i < content_length; i++) {
+                r = read(client, &c, 1);
+                if (request_append(req, c) != 0)
+                        return -1;
+        }
+
+        return 0;
 }
 
 int main(int argc, char **argv)
@@ -798,16 +897,15 @@ int main(int argc, char **argv)
 
                 if (1) {
                         printf("path: %s\n", req.path);
-                        for (int i =0; i < req.num_args; i++)
-                                printf("arg[%d]: %s = %s\n", i, req.names[i], req.values[i]);
+                        list_t* l = req.args;
+                        while (l) {
+                                pair_t* p = (pair_t*) l->data;
+                                printf("args[]: %s = %s\n", p->name, p->value);
+                                l = l->next;
+                        }
                 }
 
-
-                // HANDLE REQUEST
-                resp.status = 200;
-                response_printf(&resp, "Hello web!\n");
-                response_content_type(&resp, "text/plain");
-                // HANDLE REQUEST
+                http_request_handler(&req, &resp);
 
                 clientPrintf(client, 
                              "HTTP/1.1 %03d\r\n"

@@ -25,14 +25,13 @@
 #include <sys/time.h>
 #include <sys/file.h>
 #include "osdb.h"
+#include "list.h"
 
 typedef struct _datapoint_t datapoint_t;
 typedef struct _timeseries_t timeseries_t;
 typedef struct _datastream_t datastream_t;
-typedef struct _list_t list_t;
 typedef struct _hashtable_t hashtable_t;
 
-typedef int (*compare_func_t)(void* a, void* b);
 typedef void (*list_timeseries_callback_t)(void* userdata, datastream_t* d, timeseries_t* ts);
 
 #include "value.h"

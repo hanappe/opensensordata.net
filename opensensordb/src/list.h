@@ -20,11 +20,15 @@
 #ifndef _LIST_H
 #define _LIST_H
 
+typedef struct _list_t list_t;
+
 struct _list_t
 {
         void* data;
-        list_t *next;
+        list_t* next;
 };
+
+typedef int (*compare_func_t)(void* a, void* b);
 
 list_t* new_list(void* data);
 void delete_list(list_t *list);
