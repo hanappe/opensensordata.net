@@ -44,6 +44,8 @@ int response_print(response_t* response, char* s); /* print 0-terminated string 
 int response_printf(response_t* response, char* format, ...);
 int response_content_type(response_t* response, char* mime_type);
 
-void http_request_handler(request_t* request, response_t* response);
+int server_init();
+int server_set_option(const char* name, const char* value);
+void server_handle_request(request_t* request, response_t* response);
 
 #endif /* _SERVER_H_ */

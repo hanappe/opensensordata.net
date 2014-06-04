@@ -466,9 +466,29 @@ static void printVersion(FILE* fp)
                  VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH);
 }
 
-void parseArguments(int argc, char **argv)
+void parse_option(const char* s)
 {
-        static const char short_options [] = "hvnP:L:p:";
+        char buffer[512];
+        strncpy(buffer, s, 511);
+        buffer[511] = 0;
+
+        char* name = &buffer[0];
+        char* value = NULL;
+        
+        for (int i = 0; buffer[i] != 0; i++) {
+                if (buffer[i] == '=') {
+                        buffer[i] = 0;
+                        value = &buffer[i+1];
+                        break;
+                }
+        }
+        
+        server_set_option(name, value);
+}
+
+void parse_arguments(int argc, char **argv)
+{
+        static const char short_options [] = "hvnP:L:p:o:";
 
         static const struct option
                 long_options [] = {
@@ -478,6 +498,7 @@ void parseArguments(int argc, char **argv)
                 { "logfile",    required_argument, NULL, 'L' },
                 { "port",       required_argument, NULL, 'p' },
                 { "nodaemon",   no_argument, NULL, 'n' },
+                { "option",     required_argument, NULL, 'o' },
                 { 0, 0, 0, 0 }
         };
 
@@ -511,41 +532,15 @@ void parseArguments(int argc, char **argv)
                 case 'n':
                         nodaemon = 1;
                         break;
+                case 'o':
+                        parse_option(optarg);
+                        break;
 
                 default:
                         usage(stderr, argc, argv);
                         exit(EXIT_FAILURE);
                 }
         }
-}
-
-const char* findCommand(const char* request)
-{
-        typedef struct _command_t {
-                char* header;
-                char* cmdline;
-        } command_t;
-
-        static command_t commands[] = {
-                { "/update/network/wifi", "/var/p2pfoodlab/bin/update-network wifi 2>&1" },
-                { "/update/network/wired", "/var/p2pfoodlab/bin/update-network wired 2>&1" },
-                { "/update/network/gsm", "/var/p2pfoodlab/bin/update-network gsm 2>&1" },
-                { "/update/ssh", "/var/p2pfoodlab/bin/update-ssh 2>&1" },
-                { "/update/crontab", "/var/p2pfoodlab/bin/update-crontab 2>&1" },
-                { "/test/camera", "/var/p2pfoodlab/bin/test-camera 2>&1" },
-                { "/update/sensors", "/var/p2pfoodlab/bin/arduino enable-sensors 2>&1" },
-                { "/update/version", "/var/p2pfoodlab/bin/update-version 2>&1" },
-                { "/update/poweroff", "/var/p2pfoodlab/bin/update-poweroff 2>&1" },
-                { NULL, NULL }
-        };
-
-        for (int i = 0; commands[i].header != NULL; i++) {
-                if (strcmp(request, commands[i].header) == 0) 
-                        return commands[i].cmdline;
-                
-        }
-
-        return NULL;
 }
 
 int parseRequest(int client, request_t* req, response_t* resp)
@@ -860,7 +855,9 @@ int main(int argc, char **argv)
 {
         int err;
 
-        parseArguments(argc, argv);
+        server_init();
+
+        parse_arguments(argc, argv);
 
         if (nodaemon == 0) {
                 err = daemonise();
@@ -905,7 +902,7 @@ int main(int argc, char **argv)
                         }
                 }
 
-                http_request_handler(&req, &resp);
+                server_handle_request(&req, &resp);
 
                 clientPrintf(client, 
                              "HTTP/1.1 %03d\r\n"

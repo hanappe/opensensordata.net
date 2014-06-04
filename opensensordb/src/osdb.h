@@ -27,6 +27,11 @@ typedef struct _osdb_list_callbacks_t {
 typedef struct _osdb_t osdb_t;
 
 osdb_t* osdb_init();
+
+/*
+  Available options:
+  - "dir": Set root directory.
+ */
 int osdb_set_option(osdb_t* osdb, const char* option, const char* value);
 int osdb_finalize(osdb_t* db);
 
