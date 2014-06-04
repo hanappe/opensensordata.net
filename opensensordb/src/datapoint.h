@@ -2,10 +2,10 @@
 #ifndef _DATAPOINT_H
 #define _DATAPOINT_H
 
-typedef struct _datapoint_t {
+struct _datapoint_t {
         timestamp_t t;
         value_t v;
-} datapoint_t;
+};
 
 datapoint_t* datapoint_init(datapoint_t* p, timestamp_t t, value_t v);
 datapoint_t* datapoint_create(timestamp_t t, value_t v);

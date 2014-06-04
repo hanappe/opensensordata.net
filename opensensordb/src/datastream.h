@@ -2,7 +2,7 @@
 #ifndef _DATASTREAM_H
 #define _DATASTREAM_H
 
-typedef struct _datastream_t {
+struct _datastream_t {
         id_t id;
         timestamp_t start;
         timestamp_t end;
@@ -14,7 +14,7 @@ typedef struct _datastream_t {
         value_t sum;
         list_t* timeseries;
         int lock;
-} datastream_t;
+};
 
 datastream_t* datastream_create(id_t id,
                                 timestamp_t min_period,

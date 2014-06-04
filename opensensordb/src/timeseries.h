@@ -2,7 +2,7 @@
 #ifndef _TIMESERIES_H
 #define _TIMESERIES_H
 
-typedef struct _timeseries_t {
+struct _timeseries_t {
         id_t id;
         id_t did;
         timestamp_t start;
@@ -10,7 +10,7 @@ typedef struct _timeseries_t {
         timestamp_t period;
         uint32_t length;
         int fd;
-} timeseries_t;
+};
 
 timeseries_t* new_timeseries(id_t id, id_t did);
 void delete_timeseries(timeseries_t* ts);
