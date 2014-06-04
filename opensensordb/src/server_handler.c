@@ -1,7 +1,12 @@
 
 #include <stdlib.h>
 #include "server.h"
-#include "osdb.h"
+#include "osdb_priv.h"
+
+char* server_execute_script(const char* code, list_t* args);
+void server_free_result(char* buffer);
+
+
 
 // ----
 // Using V8
@@ -72,6 +77,16 @@ void response_bad_request(response_t* response)
         response_error(response, 400);
 }
 
+void response_not_found(response_t* response)
+{
+        response_error(response, 404);
+}
+
+void response_internal_error(response_t* response)
+{
+        response_error(response, 500);
+}
+
 void server_handle_script(request_t* request, response_t* response)
 {
         list_t* l = request->pathnodes;
@@ -94,13 +109,31 @@ void server_handle_script(request_t* request, response_t* response)
                 return;
         }
 
-        /* 
+        char* code;
+        int r = filemanager_get_script(account, script, &code);
+        if (r == -1) {
+                response_bad_request(response);
+                return;
+        } else if (r == -2) {
+                response_not_found(response);
+                return;
+        } else if (r != 0) {
+                response_internal_error(response);
+                return;
+        }
 
-           Execute script and send output to response using
-           response_append(), response_write(), response_print(), or
-           response_printf(). 
+        char* result = server_execute_script(code, request->args);
 
-        */
+        filemanager_release_script(code);
+
+        int len = strlen(result);
+        
+        response->status = 200;
+        response_content_type(response, "application/json");
+        response->body = result;
+        response->length = len;
+        response->mybuf = 1;
+        response->freebuf = server_free_result;
 }
 
 void server_handle_request(request_t* request, response_t* response)
@@ -111,6 +144,7 @@ void server_handle_request(request_t* request, response_t* response)
                 response->status = 200;
                 response_printf(response, "Hello web!\n");
                 response_content_type(response, "text/plain");
+                return;
         }
 
         const char* node = (const char*) l->data;

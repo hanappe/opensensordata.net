@@ -18,4 +18,7 @@ int filemanager_open_timeseries(id_t datastream, id_t timeseries);
 int filemanager_close_timeseries(id_t datastream, id_t timeseries, int fd); 
 int filemanager_unlink_timeseries(id_t datastream, id_t timeseries);
 
+int filemanager_get_script(const char* account, const char* name, char** script);
+void filemanager_release_script(char* script);
+
 #endif /* _FILEMANAGER_H */

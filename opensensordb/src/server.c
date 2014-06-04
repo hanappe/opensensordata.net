@@ -43,21 +43,31 @@ pair_t* new_pair_dup(char* name, char* value)
                 log_err("Out of memory");
                 return NULL;
         }
-        p->name = (p->name != NULL)? strdup(name) : NULL;
-        p->value = (p->value != NULL)? strdup(value) : NULL;
-        if ((p->name == NULL) || (p->value == NULL)) {
-                log_err("Out of memory");
-                free(p);
-                if (p->name) free(p->name);
-                return NULL;
+        memset(p, 0, sizeof(pair_t));
+        if (name != 0) {
+                p->name = strdup(name);
+                if (p->name == NULL) {
+                        log_err("Out of memory");
+                        free(p);
+                        return NULL;
+                }
+        }
+        if (value != 0) {
+                p->value = strdup(value);
+                if (p->value == NULL) {
+                        log_err("Out of memory");
+                        free(p);
+                        free(p->name);
+                        return NULL;
+                }
         }
         return p;
 } 
 
 void delete_pair(pair_t* p)
 {
-        free(p->name);
-        free(p->value);
+        if (p->name) free(p->name);
+        if (p->value) free(p->value);
         free(p);
 }
 
@@ -113,11 +123,22 @@ int path_parse(const char* path, list_t** nodes)
                                 }
 
                         } else if (state == PATH_SLASH) {
-                                index = 0;
                                 buffer[0] = c;
+                                index = 1;
                                 state = PATH_NAME;
                         } 
                 }
+        }
+
+        if ((state == PATH_NAME) && (index > 0)) {
+                buffer[index] = 0;
+                char* s = strdup(buffer);
+                if (s == NULL) {
+                        log_err("Out of memory");
+                        delete_list(node);
+                        return -1;
+                }
+                node = list_append(node, s);
         }
 
         *nodes = node;
@@ -258,25 +279,25 @@ void request_clear(request_t* request)
         }
         delete_list(request->headers);
 
-        if (request->buf) 
-                free(request->buf);
+        if (request->body) 
+                free(request->body);
 
         memset(request, 0, sizeof(request_t));
 }
 
 int request_append(request_t* request, char c)
 {
-        if (request->count >= request->size) {
-                int newsize = 1024 + 2 * request->size;
-                request->buf = realloc(request->buf, newsize);
-                if (request->buf == NULL) {
+        if (request->length >= request->buflen) {
+                int newsize = 1024 + 2 * request->buflen;
+                request->body = realloc(request->body, newsize);
+                if (request->body == NULL) {
                         log_err("Daemon: Out of memory\n");
                         request_clear(request);
                         return -1;
                 }
-                request->size = newsize;
+                request->buflen = newsize;
         }
-        request->buf[request->count++] = c;
+        request->body[request->length++] = c;
         return 0;
 }
 
@@ -297,30 +318,37 @@ int request_content_length(request_t* request)
                         }
                         return atoi(p->value);
                 }
+                n = n->next;
         }
         return 0;
 }
 
 void response_clear(response_t* response)
 {
-        if ((response->mybuf == 0) && (response->buf != NULL)) 
-                free(response->buf);
+        if (response->body != NULL) {
+                if (response->mybuf) {
+                        if (response->freebuf != NULL)
+                                response->freebuf(response->body);
+                } else {
+                        free(response->body);
+                }
+        }
         memset(response, 0, sizeof(response_t));
 }
 
 int response_append(response_t* response, char c)
 {
-        if (response->count >= response->size) {
-                int newsize = 1024 + 2 * response->size;
-                response->buf = realloc(response->buf, newsize);
-                if (response->buf == NULL) {
+        if (response->length >= response->buflen) {
+                int newsize = 1024 + 2 * response->buflen;
+                response->body = realloc(response->body, newsize);
+                if (response->body == NULL) {
                         log_err("Daemon: Out of memory\n");
                         response_clear(response);
                         return -1;
                 }
-                response->size = newsize;
+                response->buflen = newsize;
         }
-        response->buf[response->count++] = c;
+        response->body[response->length++] = c;
         return 0;
 }
 
@@ -553,6 +581,7 @@ int parseRequest(int client, request_t* req, response_t* resp)
                 REQ_ARGS_VALUE,
                 REQ_REQLINE_LF,
                 REQ_HEADER_NAME,
+                REQ_HEADER_VALUE_START,
                 REQ_HEADER_VALUE,
                 REQ_HEADER_LF,
                 REQ_HEADERS_END_LF,
@@ -772,7 +801,7 @@ int parseRequest(int client, request_t* req, response_t* resp)
                                 buffer[count++] = 0;
                                 count = 0;
                                 p = new_pair_dup(buffer, NULL);
-                                state = REQ_HEADER_VALUE;
+                                state = REQ_HEADER_VALUE_START;
 
                         } else if (count < BUFLEN-1) {
                                 buffer[count++] = (char) c;
@@ -782,6 +811,27 @@ int parseRequest(int client, request_t* req, response_t* resp)
                                 log_warn("Daemon: Header name too long: %s\n", buffer);
                                 resp->status = 400;
                                 return -1;
+                        }
+                        break;
+
+                case REQ_HEADER_VALUE_START: 
+                        if ((c == ' ') || (c == '\t')) {
+                                // Do nothing
+
+                        } else if (c == '\r') {
+                                log_warn("Daemon: Bad header: %s\n", p->name);
+                                resp->status = 400;
+                                return -1;
+
+                        } else if (c == '\n') {
+                                log_warn("Daemon: Bad header: %s\n", p->name);
+                                resp->status = 400;
+                                return -1;
+                                
+                        } else if (count < BUFLEN-1) {
+                                buffer[0] = (char) c;
+                                count = 1;
+                                state = REQ_HEADER_VALUE;
                         }
                         break;
 
@@ -799,7 +849,7 @@ int parseRequest(int client, request_t* req, response_t* resp)
                                 p->value = strdup(buffer);
                                 req->headers = list_append(req->headers, p);
                                 state = REQ_HEADER_NAME;
-
+                                
                         } else if (count < BUFLEN-1) {
                                 buffer[count++] = (char) c;
 
@@ -900,6 +950,12 @@ int main(int argc, char **argv)
                                 printf("args[]: %s = %s\n", p->name, p->value);
                                 l = l->next;
                         }
+                        l = req.headers;
+                        while (l) {
+                                pair_t* p = (pair_t*) l->data;
+                                printf("headers[]: '%s': '%s'\n", p->name, p->value);
+                                l = l->next;
+                        }
                 }
 
                 server_handle_request(&req, &resp);
@@ -909,8 +965,8 @@ int main(int argc, char **argv)
                              "Content-Length: %d\r\n"
                              "Content-Type: %s\r\n"
                              "\r\n", 
-                             resp.status, resp.count, resp.content_type);
-                clientWrite(client, resp.buf, resp.count);
+                             resp.status, resp.length, resp.content_type);
+                clientWrite(client, resp.body, resp.length);
 
                 closeClient(client);
                 

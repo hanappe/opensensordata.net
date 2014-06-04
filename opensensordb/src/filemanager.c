@@ -644,3 +644,71 @@ static int filemanager_revert_fileops(id_t datastream, list_t* l, list_t* last)
         }
         return 0;
 }
+
+static int _is_name_valid(const char* name)
+{
+        int len = strlen(name);
+        if (len < 1) {
+                log_err("Name is too short: %s", name);
+                return 0;
+        }
+        if (len > 63) {
+                log_err("Name is too long: %s", name);
+                return 0;
+        }
+        for (int i = 0; i < len; i++) {
+                char c = name[i];
+                if (((c < 'a') || (c > 'z'))
+                    && ((c < 'A') || (c > 'Z'))
+                    && ((c < '0') || (c > '9'))
+                    && (c != '-')) {
+                        log_err("Invalid name: %s", name);
+                        return 0;
+                }
+        }
+        return 1;
+}
+
+int filemanager_get_script(const char* account, const char* name, char** script)
+{
+        char path[512];
+        struct stat sb;
+
+        *script = NULL;
+                
+        if (!_is_name_valid(account)
+            || !_is_name_valid(name)) {
+                return -1;
+        }
+
+        snprintf(path, 512, "%s/scripts/%s/%s.js", _dir, account, name);
+
+        if ((stat(path, &sb) != 0)
+            || !S_ISREG(sb.st_mode)
+            || (sb.st_size == 0)) {
+                return -2;
+        }
+
+        char* buffer = malloc(sb.st_size + 1);
+        FILE* fp = fopen(path, "r");
+        if (fp == NULL)
+                return -3;
+
+        size_t n = fread(buffer, 1, sb.st_size, fp);
+        if (n != sb.st_size) {
+                fclose(fp);
+                return -3;
+        }
+
+        buffer[sb.st_size] = 0;
+        *script = buffer;
+
+        fclose(fp);
+
+        return 0;
+}
+
+void filemanager_release_script(char* buffer)
+{
+        free(buffer);
+}

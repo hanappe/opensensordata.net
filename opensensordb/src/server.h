@@ -24,18 +24,19 @@ typedef struct _request_t {
         list_t* pathnodes;
         list_t* args;
         list_t* headers;
-        char* buf;
-        int size;
-        int count;
+        char* body;
+        int length;
+        int buflen;
 } request_t;
 
 typedef struct _response_t {
         int status;
-        int mybuf;
-        char* buf;
-        int size;
-        int count;
+        char* body;
+        int length;
+        int buflen;
         char content_type[256];
+        int mybuf;
+        void (*freebuf)(char*);
 } response_t;
 
 int response_append(response_t* response, char c);
