@@ -6,15 +6,16 @@
 // ----
 // Using V8
 
-// GET /scripts/<name>
+// GET /scripts/<account_name>/<script_name>.js
+
+
 
 // ----
 // In C
 
-// File system:
+// Through file system:
 // GET /datastream/<id>.json
 // GET /group/<id>.json
-
 
 
 // PUT /datastream/<id>.json          -> create/overwrite the object
@@ -43,7 +44,6 @@
 // GET /photo/<id>/<date>_<size>.jpg   -> get a photo
 // PUT /photo/<id>/<date>.jpg          -> upload a photo
 
-// HANDLE REQUEST
 
 static osdb_t* osdb;
 
@@ -61,10 +61,66 @@ int server_set_option(const char* name, const char* value)
         return osdb_set_option(osdb, name, value);
 }
 
+void response_error(response_t* response, int status)
+{
+        response_clear(response);
+        response->status = status;
+}
+
+void response_bad_request(response_t* response)
+{
+        response_error(response, 400);
+}
+
+void server_handle_script(request_t* request, response_t* response)
+{
+        list_t* l = request->pathnodes;
+        l = list_next(l);
+        if (l == NULL) {
+                response_bad_request(response);
+                return;
+        }
+        const char* account = (const char*) list_get(l);
+        
+        l = list_next(l);
+        if (l == NULL) {
+                response_bad_request(response);
+                return;
+        }
+        const char* script = (const char*) l->data;
+
+        if (!request->method == HTTP_GET) {
+                response_bad_request(response);
+                return;
+        }
+
+        /* 
+
+           Execute script and send output to response using
+           response_append(), response_write(), response_print(), or
+           response_printf(). 
+
+        */
+}
+
 void server_handle_request(request_t* request, response_t* response)
 {
-        response->status = 200;
-        response_printf(response, "Hello web!\n");
-        response_content_type(response, "text/plain");
+        list_t* l = request->pathnodes;
+        
+        if (l == NULL) { // root of web site
+                response->status = 200;
+                response_printf(response, "Hello web!\n");
+                response_content_type(response, "text/plain");
+        }
+
+        const char* node = (const char*) l->data;
+
+        if (strcmp(node, "scripts") == 0) {
+                server_handle_script(request, response);
+
+        } else if (strcmp(node, "datastream") == 0) {
+
+        }
+
 }
 

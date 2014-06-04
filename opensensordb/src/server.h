@@ -43,6 +43,7 @@ int response_write(response_t* response, char* buffer, int len);
 int response_print(response_t* response, char* s); /* print 0-terminated string */
 int response_printf(response_t* response, char* format, ...);
 int response_content_type(response_t* response, char* mime_type);
+void response_clear(response_t* response);
 
 int server_init();
 int server_set_option(const char* name, const char* value);
