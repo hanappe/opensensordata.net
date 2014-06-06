@@ -14,6 +14,8 @@ int filemanager_open_datastream(id_t datastream);
 int filemanager_lock_datastream(id_t id);
 int filemanager_unlock_datastream(id_t datastream, int fd);
 
+int filemanager_open_datastream_description(id_t id);
+
 int filemanager_open_timeseries(id_t datastream, id_t timeseries); 
 int filemanager_close_timeseries(id_t datastream, id_t timeseries, int fd); 
 int filemanager_unlink_timeseries(id_t datastream, id_t timeseries);

@@ -660,11 +660,6 @@ int parseRequest(int client, request_t* req, response_t* resp)
                                 }
                                 memcpy(req->path, buffer, count);
                                 count = 0;
-                                int r = path_parse(req->path, &req->pathnodes);
-                                if (r != 0) {
-                                        resp->status = 400;
-                                        return -1;
-                                }
                                 state = REQ_HTTPVERSION;
 
                         } else if (c == '?') {
@@ -884,6 +879,12 @@ int parseRequest(int client, request_t* req, response_t* resp)
                         break;
                 }
        }
+
+        r = path_parse(req->path, &req->pathnodes);
+        if (r != 0) {
+                resp->status = 400;
+                return -1;
+        }
 
         int content_length = request_content_length(req);
         if (content_length == -1) {

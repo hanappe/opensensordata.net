@@ -145,6 +145,26 @@ int filemanager_open_datastream(id_t id)
         }
 }
 
+int filemanager_open_datastream_description(id_t id)
+{
+        char path[512];
+        int a = id % 100;
+        int b = (id / 100) % 100;
+        int c = (id / 10000) % 100;
+
+        snprintf(path, 512, "%s/%02d/%02d/%02d/%012d/DS.json", _dir, a, b, c, id);
+        
+        int fd = open(path, O_RDWR);
+        
+        if (fd == -1) {
+                log_err("Failed to open the datastream description file (%d): %s", 
+                        id, strerror(errno));
+                return -1;
+        }
+        
+        return fd;
+}
+
 int filemanager_lock_datastream(id_t id)
 {
         char path[512];
@@ -648,7 +668,7 @@ static int filemanager_revert_fileops(id_t datastream, list_t* l, list_t* last)
 static int _is_name_valid(const char* name)
 {
         int len = strlen(name);
-        if (len < 1) {
+        if (len < 2) {
                 log_err("Name is too short: %s", name);
                 return 0;
         }
@@ -656,7 +676,14 @@ static int _is_name_valid(const char* name)
                 log_err("Name is too long: %s", name);
                 return 0;
         }
-        for (int i = 0; i < len; i++) {
+        char c = name[0];
+        if (((c < 'a') || (c > 'z'))
+            && ((c < 'A') || (c > 'Z'))
+            && ((c < '0') || (c > '9'))) {
+                log_err("Invalid name: %s", name);
+                return 0;
+        }
+        for (int i = 1; i < len; i++) {
                 char c = name[i];
                 if (((c < 'a') || (c > 'z'))
                     && ((c < 'A') || (c > 'Z'))
@@ -681,7 +708,10 @@ int filemanager_get_script(const char* account, const char* name, char** script)
                 return -1;
         }
 
-        snprintf(path, 512, "%s/scripts/%s/%s.js", _dir, account, name);
+        char a = account[0];
+        char b = account[1];
+
+        snprintf(path, 512, "%s/%c/%c/%s/scripts/%s.js", _dir, a, b, account, name);
 
         if ((stat(path, &sb) != 0)
             || !S_ISREG(sb.st_mode)
