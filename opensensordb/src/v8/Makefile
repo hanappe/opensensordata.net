@@ -14,7 +14,7 @@ V8PATH = /home/low-energy-boinc/v8
 V8OUT = native
 
 CXXFLAGS += -I./ \
-	-I./$(V8PATH)/include/
+	-I$(V8PATH)/include/
 
 #LDFLAGS += -L./depends/v8/lib/ \
 	-L/usr/lib/mysql
@@ -22,7 +22,8 @@ CXXFLAGS += -I./ \
 #depends_src = $(addprefix ./ , datastream.cpp)
 depends_src = datastream.cpp \
 	db.cpp \
-	point.cpp
+	point.cpp \
+	jsengine.cpp
 
 
 application_srcs = v8.cpp $(depends_src)
@@ -50,7 +51,7 @@ all: $(depends) $(programs)
 #application: $(application_objs)
 #	$(CXX) -I$(INCLUDEPATH) application.cpp -o testv8 $(LDFLAGS) $(application_static_libs)
 
-jswrap: $(application_objs)
+v8: $(application_objs)
 	$(CXX) $(CXXFLAGS) $(application_objs) -o v8 -Wl,--start-group $(V8PATH)/out/$(V8OUT)/obj.target/{tools/gyp/libv8_{base.x64,snapshot},third_party/icu/libicu{uc,i18n,data}}.a -Wl,--end-group -lrt $(application_static_libs) -lmysqlclient
 
 

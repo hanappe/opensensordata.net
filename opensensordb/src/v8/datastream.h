@@ -20,19 +20,15 @@ using namespace v8;
 
 
 struct Pair {
-  Pair() {
-  }
-  
-  Pair(time_t t, double v) : time(t), value(v) {
-  
-  }
+        //Pair() {}
+        
+        //Pair(time_t t, double v) : time(t), value(v) {}
 
-  Pair(const Pair& p) : time(p.time), value(p.value) {
-  
-  }
+        //Pair(const Pair& p) : time(p.time), value(p.value) {}
 
-  time_t time;
-  double value;
+        char strtime[256];
+        time_t time;
+        double value;
 };
 
 
@@ -49,24 +45,49 @@ public:
 	  clear();
 	}
 
+
+        bool load(int id);
+        bool loadContiguous(int id);
+
+	Handle<Array> toV8Array(Isolate * i);
+        Handle<Array> toV8ArrayContiguous(Isolate * i);
+
 	void clear() {
 	  for (std::vector<Datarow*>::iterator it = datarows.begin(); it != datarows.end(); ++it) {
 	    delete (*it);
 	  };
 	  datarows.clear();
 	  current = 0x0;
+          //TODO free all strtime
 	}
+
+        // Simple way
+
+        void appendDatapoints(char * strtime, time_t time, double value) {
+                Pair p;
+                strcpy(p.strtime, strtime);
+                p.time = time;
+                p.value = value;
+
+                datapoints.push_back(p);
+                
+	}
+
+        // Contiguous way
 	
 	void beginDatarow() {
 	  current = new Datarow;
 	}
 
-	void append(int date, double value) {
+	void append(char * strtime, time_t time, double value) {
 	  
 	  if (!current) {
 	    beginDatarow();
 	  }
-	  Pair p(date, value);
+	  Pair p;
+          strcpy(p.strtime, strtime);
+          p.time = time;
+          p.value = value;
 	  //std::cout << "Pair date: " << p.date << " v: " << p.value << current << std::endl;
 	  current->push_back(p);
 	}
@@ -94,8 +115,13 @@ public:
 	  */
 	};
 
-	Handle<Array> toV8Array(Isolate * i);
 
+
+
+        // Classic Storage
+	std::vector<Pair> datapoints;
+
+        // "Contiguous" storage
 	typedef std::vector<Pair> Datarow;
 	std::vector<Datarow*> datarows;
 
@@ -103,16 +129,16 @@ public:
 	
         struct JS {
                 
-	  static void Initialize(Handle<ObjectTemplate> global, Isolate* i) {
-	    fprintf(stdout, "Datastream Initialize\n");
-	    global->Set(String::NewFromUtf8(i, "Datastream"), FunctionTemplate::New(i, Constructor));
-	  }
-
-	  static void Constructor(const FunctionCallbackInfo<Value>& info);
-	  static void GetDatapoints(Local<String> property, const PropertyCallbackInfo<Value> &info);
-	  static void GetX(Local<String> property, const PropertyCallbackInfo<Value> &info);
-	  static void Select(const FunctionCallbackInfo<Value>& info);
-
+                static void Initialize(Handle<ObjectTemplate> global, Isolate* i) {
+                        fprintf(stdout, "Datastream Initialize\n");
+                        global->Set(String::NewFromUtf8(i, "Datastream"), FunctionTemplate::New(i, Constructor));
+                }
+                
+                static void Constructor(const FunctionCallbackInfo<Value>& info);
+                static void Load(const FunctionCallbackInfo<Value>& info);
+                static void Select(const FunctionCallbackInfo<Value>& info);
+                static void GetDatapoints(Local<String> property, const PropertyCallbackInfo<Value> &info);
+                static void GetX(Local<String> property, const PropertyCallbackInfo<Value> &info);
 
         }; // end struc JS
 };

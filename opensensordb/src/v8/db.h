@@ -1,5 +1,5 @@
-#ifndef MDBV8_H_
-#define MDBV8_H_
+#ifndef DBJS_H_
+#define DBJS_H_
 
 #include <string>
 
@@ -19,8 +19,8 @@ class DB {
 
   static DB * GetInstance();
 
-  Datastream * getDatastream(int id);
- 
+  bool loadDatastream(Datastream * datastream, int id);
+  bool loadDatastreamContiguous(Datastream * datastream, int id);
 
   bool isConnected() const;
  
@@ -31,4 +31,4 @@ class DB {
   static DB * smDB;
 };
 
-#endif // MDBV8_H_
+#endif // DBJS_H_
