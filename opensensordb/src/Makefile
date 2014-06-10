@@ -2,7 +2,7 @@ lib_sources = osdb.c datapoint.c filemanager.c value.c timestamp.c fileio.c time
 lib_objects = ${lib_sources:.c=.o}
 lib_libs = -lm
 
-server_sources = server.c server_handler.c jsdummy.c
+server_sources = server.c server_handler.c jsv8.c
 server_objects = ${server_sources:.c=.o}
 server_libs = libosdb.a -lm
 
