@@ -48,7 +48,8 @@
 typedef int (*hashtable_iter_t)(id_t id, void* value, void* data);
 typedef void (*hashtable_delete_t)(void* value);
 
-hashtable_t* new_hashtable(hashtable_delete_t delete);
+hashtable_t* new_hashtable(hashtable_delete_t del);
+
 void delete_hashtable(hashtable_t *table);
 
 void hashtable_insert(hashtable_t *table, id_t id, void* value);

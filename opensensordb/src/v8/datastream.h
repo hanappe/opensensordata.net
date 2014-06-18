@@ -48,6 +48,7 @@ public:
 
         bool load(int id);
         bool loadContiguous(int id);
+	void print();
 
 	Handle<Array> toV8Array(Isolate * i);
         Handle<Array> toV8ArrayContiguous(Isolate * i);
@@ -99,7 +100,7 @@ public:
 	  }
 	}
 
-	void print() {
+
 	  /*
 	  std::cout << "Datastreqm print begin" << std::endl;
 	  std::cout << "data row count: " << datarows.size() << std::endl;
@@ -113,9 +114,6 @@ public:
 	    };
 	  };
 	  */
-	};
-
-
 
 
         // Classic Storage
@@ -129,10 +127,7 @@ public:
 	
         struct JS {
                 
-                static void Initialize(Handle<ObjectTemplate> global, Isolate* i) {
-                        fprintf(stdout, "Datastream Initialize\n");
-                        global->Set(String::NewFromUtf8(i, "Datastream"), FunctionTemplate::New(i, Constructor));
-                }
+                static void Initialize(Handle<ObjectTemplate> global, Isolate* i);
                 
                 static void Constructor(const FunctionCallbackInfo<Value>& info);
                 static void Load(const FunctionCallbackInfo<Value>& info);

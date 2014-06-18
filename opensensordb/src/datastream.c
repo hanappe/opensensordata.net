@@ -110,7 +110,9 @@ static int _datastream_load(datastream_t* d)
 
 datastream_t* datastream_load(id_t id)
 {
-        datastream_t* d = new_datastream(id);
+        // KEV WARNING: constructor with id doesn'nt exist, so I use datastream_create.
+        //datastream_t* d = new_datastream(id);
+        datastream_t* d = datastream_create(id, 0, 0, 0);
         if (d == NULL) 
                 return NULL;
 

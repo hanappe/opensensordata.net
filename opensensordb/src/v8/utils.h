@@ -84,6 +84,8 @@ namespace {
     return result;
   }
 
+
+  // TODO: REMOVE THIS
   time_t ConvertToTimeSinceEpoch(const std::string& s) {
     
     time_t result = 0;
@@ -114,10 +116,6 @@ namespace {
       // Parse time
       std::vector<std::string> time = split(both[1], ':');
       if (date.size() == 3) {
-              char* p = NULL;
-              //tinfo->tm_hour = std::strtol(time[0].c_str(), &p, 10);
-              //tinfo->tm_min = std::strtol(time[1].c_str(), &p, 10);
-              //tinfo->tm_sec = std::strtol(time[2].c_str(), &p, 10);
               tinfo->tm_hour = atoi(time[0].c_str());
               tinfo->tm_min = atoi(time[1].c_str());
               tinfo->tm_sec = atoi(time[2].c_str());
@@ -128,12 +126,8 @@ namespace {
 
       if (has_time && has_date) {
               result = mktime(tinfo);
-              //result = (mktime(tinfo) * 1000) + (tinfo->tm_hour * 60 * 60 + tinfo->tm_min * 60 + tinfo->tm_sec);
-              std::cout << "TESTEUH A: " << tinfo->tm_hour << "_" <<  tinfo->tm_min << "_" <<  tinfo->tm_sec << "_" << std::endl;
-              std::cout << "TESTEUH B: " << time[0] << "_" <<  time[1] << "_" <<  time[2] << "_" << std::endl;
-              std::cout << "TESTEUH C: " << both[1] << std::endl;
               
-              //result = (mktime(tinfo) * 1000) + (tinfo->tm_sec * 1000);
+              result = (mktime(tinfo) * 1000);
       } else {
               result = 0;
       }

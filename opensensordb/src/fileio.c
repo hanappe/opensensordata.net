@@ -68,7 +68,7 @@ int fileio_mmap(fileio_mmap_t* map, int fd, uint32_t offset, uint32_t length)
 
            map->mmap_offset = offset & ~(sysconf(_SC_PAGE_SIZE) - 1);
            map->mmap_length = length + offset - map->mmap_offset;
-           map->mmap_addr = mmap(NULL, length + offset - map->mmap_offset, PROT_READ,
+           map->mmap_addr = (char *)mmap(NULL, length + offset - map->mmap_offset, PROT_READ,
                                  MAP_PRIVATE, fd, map->mmap_offset);
            if (map->mmap_addr == MAP_FAILED) {
                    /* char buf[512]; */

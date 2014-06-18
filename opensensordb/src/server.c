@@ -1,4 +1,5 @@
 #define _BSD_SOURCE
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
@@ -11,15 +12,16 @@
 #include <fcntl.h>
 #include <arpa/inet.h>
 #include <signal.h>
-#include "log.h"
+
+#include "osdb_priv.h"
 #include "server.h"
 
 #define VERSION_MAJOR 1
 #define VERSION_MINOR 0
 #define VERSION_PATCH 0
 
-static char* pidFile = "/var/run/opensensordb.pid";
-static char* logFile = "/var/log/opensensordb.log";
+static const char* pidFile = "/var/run/opensensordb.pid";
+static const char* logFile = "/var/log/opensensordb.log";
 static int port = 10081;
 static int nodaemon = 0;
 static int serverSocket = -1;
@@ -289,7 +291,7 @@ int request_append(request_t* request, char c)
 {
         if (request->length >= request->buflen) {
                 int newsize = 1024 + 2 * request->buflen;
-                request->body = realloc(request->body, newsize);
+                request->body = (char *)realloc(request->body, newsize);
                 if (request->body == NULL) {
                         log_err("Daemon: Out of memory\n");
                         request_clear(request);
@@ -340,7 +342,7 @@ int response_append(response_t* response, char c)
 {
         if (response->length >= response->buflen) {
                 int newsize = 1024 + 2 * response->buflen;
-                response->body = realloc(response->body, newsize);
+                response->body = (char *)realloc(response->body, newsize);
                 if (response->body == NULL) {
                         log_err("Daemon: Out of memory\n");
                         response_clear(response);
@@ -352,7 +354,7 @@ int response_append(response_t* response, char c)
         return 0;
 }
 
-int response_write(response_t* response, char* buffer, int len)
+int response_write(response_t* response, const char* buffer, int len)
 {
         while (--len >= 0) {
                 if (response_append(response, *buffer++) != 0)
@@ -361,13 +363,13 @@ int response_write(response_t* response, char* buffer, int len)
         return 0;
 }
 
-int response_print(response_t* response, char* s)
+int response_print(response_t* response, const char* s)
 {
         int len = strlen(s);
         return response_write(response, s, len);
 }
 
-int response_printf(response_t* response, char* format, ...)
+int response_printf(response_t* response, const char* format, ...)
 {
         char buffer[1024];
         va_list ap;
@@ -382,7 +384,7 @@ int response_printf(response_t* response, char* format, ...)
         return response_print(response, buffer);
 }
 
-int response_content_type(response_t* response, char* mime_type)
+int response_content_type(response_t* response, const char* mime_type)
 {
         int len = sizeof(response->content_type);
         strncpy(response->content_type, mime_type, len);
@@ -653,7 +655,7 @@ int parseRequest(int client, request_t* req, response_t* resp)
                 case REQ_PATH: 
                         if (c == ' ') {
                                 buffer[count++] = 0;
-                                req->path = malloc(count);
+                                req->path = (char *)malloc(count);
                                 if (req->path == NULL) {
                                         log_err("Out of memory");
                                         return -1;
@@ -664,7 +666,7 @@ int parseRequest(int client, request_t* req, response_t* resp)
 
                         } else if (c == '?') {
                                 buffer[count++] = 0;
-                                req->path = malloc(count);
+                                req->path = (char *) malloc(count);
                                 memcpy(req->path, buffer, count);
                                 count = 0;
                                 state = REQ_ARGS_NAME;
@@ -721,21 +723,35 @@ int parseRequest(int client, request_t* req, response_t* resp)
 
                 case REQ_ARGS_VALUE: 
                         if (c == ' ') {
-                                buffer[count++] = 0;
-                                count = 0;
-                                p->value = strdup(buffer);
-                                if (p->value == NULL) {
-                                        log_err("Out of memory");
+                                if (count > 0) {
+                                        buffer[count++] = 0;
+                                        count = 0;
+                                        p->value = strdup(buffer);
+                                        if (p->value == NULL) {
+                                                log_err("Out of memory");
+                                        }
+                                } else {
+                                        log_warn("Args: missing value for name: %s\n", p->name);
+                                        p->value = NULL;
+                                        buffer[count++] = 0;
+                                        count = 0;
                                 }
                                 req->args = list_append(req->args, p);
                                 state = REQ_HTTPVERSION;
                                 
                         } else if (c == '&') {
-                                buffer[count++] = 0;
-                                count = 0;
-                                p->value = strdup(buffer);
-                                if (p->value == NULL) {
-                                        log_err("Out of memory");
+                                if (count > 0) {
+                                        buffer[count++] = 0;
+                                        count = 0;
+                                        p->value = strdup(buffer);
+                                        if (p->value == NULL) {
+                                                log_err("Out of memory");
+                                        }
+                                } else {
+                                        log_warn("Args: missing value for name: %s\n", p->name);
+                                        p->value = NULL;
+                                        buffer[count++] = 0;
+                                        count = 0;
                                 }
                                 req->args = list_append(req->args, p);
                                 state = REQ_ARGS_NAME;

@@ -1,12 +1,10 @@
-
 #include <stdlib.h>
+
 #include "server.h"
 #include "osdb_priv.h"
 
 char* server_execute_script(const char* code, list_t* args);
 void server_free_result(char* buffer);
-
-
 
 // ----
 // Using V8
@@ -111,6 +109,7 @@ void server_handle_script(request_t* request, response_t* response)
 
         char* code;
         int r = filemanager_get_script(account, script, &code);
+        
         if (r == -1) {
                 response_bad_request(response);
                 return;
@@ -151,10 +150,8 @@ void server_handle_request(request_t* request, response_t* response)
 
         if (strcmp(node, "scripts") == 0) {
                 server_handle_script(request, response);
-
         } else if (strcmp(node, "datastream") == 0) {
 
         }
-
 }
 

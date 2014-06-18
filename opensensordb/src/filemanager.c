@@ -696,22 +696,55 @@ static int _is_name_valid(const char* name)
         return 1;
 }
 
+static int _is_filename_valid(const char* name)
+{
+        int len = strlen(name);
+        if (len < 2) {
+                log_err("Name is too short: %s", name);
+                return 0;
+        }
+        if (len > 63) {
+                log_err("Name is too long: %s", name);
+                return 0;
+        }
+        char c = name[0];
+        if (((c < 'a') || (c > 'z'))
+            && ((c < 'A') || (c > 'Z'))
+            && ((c < '0') || (c > '9'))) {
+                log_err("Invalid name: %s", name);
+                return 0;
+        }
+        for (int i = 1; i < len; i++) {
+                char c = name[i];
+                if (((c < 'a') || (c > 'z'))
+                    && ((c < 'A') || (c > 'Z'))
+                    && ((c < '0') || (c > '9'))
+                    && (c != '-') && (c != '.')) {
+                        log_err("Invalid name: %s", name);
+                        return 0;
+                }
+        }
+        return 1;
+}
+
 int filemanager_get_script(const char* account, const char* name, char** script)
 {
         char path[512];
         struct stat sb;
 
         *script = NULL;
-                
+
         if (!_is_name_valid(account)
-            || !_is_name_valid(name)) {
+            || !_is_filename_valid(name)) {
                 return -1;
         }
 
         char a = account[0];
         char b = account[1];
 
-        snprintf(path, 512, "%s/%c/%c/%s/scripts/%s.js", _dir, a, b, account, name);
+        //Kev
+        //snprintf(path, 512, "%s/%c/%c/%s/scripts/%s.js", _dir, a, b, account, name);
+        snprintf(path, 512, "%s/%c/%c/%s/scripts/%s", _dir, a, b, account, name);
 
         if ((stat(path, &sb) != 0)
             || !S_ISREG(sb.st_mode)
@@ -719,13 +752,13 @@ int filemanager_get_script(const char* account, const char* name, char** script)
                 return -2;
         }
 
-        char* buffer = malloc(sb.st_size + 1);
+        char* buffer = (char *)malloc(sb.st_size + 1);
         FILE* fp = fopen(path, "r");
         if (fp == NULL)
                 return -3;
 
         size_t n = fread(buffer, 1, sb.st_size, fp);
-        if (n != sb.st_size) {
+        if (n != (size_t) sb.st_size) {
                 fclose(fp);
                 return -3;
         }

@@ -2,6 +2,10 @@
 #ifndef _OSD_PRIV_H
 #define _OSD_PRIV_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #ifndef _BSD_SOURCE
 #define _BSD_SOURCE
 #endif
@@ -44,5 +48,9 @@ typedef void (*list_timeseries_callback_t)(void* userdata, datastream_t* d, time
 #include "fileio.h"
 #include "hashtable.h"
 #include "log.h"
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* _OSD_PRIV_H */
