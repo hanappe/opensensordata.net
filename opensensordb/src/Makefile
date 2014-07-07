@@ -30,7 +30,7 @@ V8OUT = native
 
 CXXFLAGS += -I$(V8PATH)/include/ 
 
-all: osdb_server osdb_cli 
+all: opensensordb osdb_cli 
 
 #libosdb.a: $(lib_objects)
 #	ar rvs $@ $^
@@ -38,7 +38,7 @@ all: osdb_server osdb_cli
 osdb_cli: $(lib_objects) $(cli_objects)
 	g++ -g $(CXXFLAGS) $(cli_objects) $(lib_objects) $(cli_libs) -o $@
 
-osdb_server: $(lib_objects) $(server_objects) $(jsengine_objects)
+opensensordb: $(lib_objects) $(server_objects) $(jsengine_objects)
 	g++ -g $(CXXFLAGS) $(lib_objects) $(server_objects) $(jsengine_objects) $(server_libs) -o $@ -Wl,--start-group $(V8PATH)/out/$(V8OUT)/obj.target/{tools/gyp/libv8_{base.x64,snapshot},third_party/icu/libicu{uc,i18n,data}}.a -Wl,--end-group -lrt $(application_static_libs) -lmysqlclient
 
 %.o: %.c
@@ -46,6 +46,9 @@ osdb_server: $(lib_objects) $(server_objects) $(jsengine_objects)
 
 %.o: %.cpp
 	g++ -c $(CXXFLAGS) $^ -o $@ 
+
+install: opensensordb
+	cp opensensordb /usr/local/bin
 
 clean:
 	rm -f $(lib_objects) $(server_objects) $(cli_objects) $(jsengine_objects)
