@@ -8,7 +8,7 @@ CFLAGS = -g -Wall -std=c99
 CXX = g++
 CXXFLAGS = -g -Wall -std=c++0x
 
-#V8PATH = ../v8
+# V8 Source Path
 V8PATH = /home/low-energy-boinc/v8
 
 V8OUT = native
@@ -21,6 +21,7 @@ CXXFLAGS += -I./ \
 
 #depends_src = $(addprefix ./ , datastream.cpp)
 depends_src = datastream.cpp \
+	group.cpp \
 	db.cpp \
 	point.cpp \
 	jsengine.cpp

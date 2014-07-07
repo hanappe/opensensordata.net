@@ -5,8 +5,9 @@
 
 #include <mysql/mysql.h>
 
+class Group;
 class Datastream;
-
+class Photostream;
 
 class DB {
  public:
@@ -19,12 +20,14 @@ class DB {
 
   static DB * GetInstance();
 
+  bool loadGroup(Group * group, int id);
+
   bool loadDatastream(Datastream * datastream, int id);
   bool loadDatastreamContiguous(Datastream * datastream, int id);
 
+  bool loadPhotostream(Photostream * photostream, int id);
+
   bool isConnected() const;
- 
-  static std::string GetPassword();
   
   MYSQL * mMysql;
   

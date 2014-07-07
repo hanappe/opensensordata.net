@@ -1,10 +1,8 @@
 SHELL = /bin/bash
 
-
-jsengine_sources = v8/db.cpp v8/datastream.cpp v8/point.cpp v8/jsengine.cpp
+jsengine_sources = v8/db.cpp v8/group.cpp v8/datastream.cpp v8/photostream.cpp v8/point.cpp v8/jsengine.cpp
 jsengine_objects = ${jsengine_sources:.cpp=.o}
 jsengine_libs = libosdb.a -lm
-
 
 lib_sources = osdb.c datapoint.c filemanager.c value.c timestamp.c fileio.c timeseries.c datastream.c list.c hashtable.c log.c
 lib_objects = ${lib_sources:.c=.o}

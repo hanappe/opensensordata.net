@@ -14,127 +14,104 @@
 #include <vector>
 
 #include "utils.h"
-//#include "mdb.h"
 
 using namespace v8;
 
 
-struct Pair {
-        //Pair() {}
-        
-        //Pair(time_t t, double v) : time(t), value(v) {}
-
-        //Pair(const Pair& p) : time(p.time), value(p.value) {}
+struct Datapoint {
 
         char strtime[256];
         time_t time;
         double value;
-};
 
+	void print() const;
+};
 
 class Datastream {
 public:
 
-        Datastream(int id = 0) : mId(id), current(0x0) {
+	int id;
+	int ownerId;
+	char name[512];
+	char description[512];
+        
+        // Classic Storage
+	std::vector<Datapoint> datapoints;
 
-	}
+        // "Contiguous" storage
+	typedef std::vector<Datapoint> Datarow;
+	std::vector<Datarow*> datarows;
 
-	int mId;
-	
-	~Datastream() {
-	  clear();
-	}
+	Datarow * current;
 
+public:
+
+        Datastream();
+	~Datastream();
 
         bool load(int id);
         bool loadContiguous(int id);
-	void print();
+	void print() const;
+	void clear();
+        void clearContiguous();
 
-	Handle<Array> toV8Array(Isolate * i);
+	Handle<Array> toV8Array(Isolate * i) const;
         Handle<Array> toV8ArrayContiguous(Isolate * i);
-
-	void clear() {
-	  for (std::vector<Datarow*>::iterator it = datarows.begin(); it != datarows.end(); ++it) {
-	    delete (*it);
-	  };
-	  datarows.clear();
-	  current = 0x0;
-          //TODO free all strtime
-	}
 
         // Simple way
 
         void appendDatapoints(char * strtime, time_t time, double value) {
-                Pair p;
-                strcpy(p.strtime, strtime);
-                p.time = time;
-                p.value = value;
+                Datapoint d;
+                strcpy(d.strtime, strtime);
+                d.time = time;
+                d.value = value;
 
-                datapoints.push_back(p);
-                
+                datapoints.push_back(d);
 	}
 
         // Contiguous way
 	
 	void beginDatarow() {
-	  current = new Datarow;
+                current = new Datarow;
 	}
 
 	void append(char * strtime, time_t time, double value) {
-	  
-	  if (!current) {
-	    beginDatarow();
-	  }
-	  Pair p;
-          strcpy(p.strtime, strtime);
-          p.time = time;
-          p.value = value;
-	  //std::cout << "Pair date: " << p.date << " v: " << p.value << current << std::endl;
-	  current->push_back(p);
+                if (!current) {
+                        beginDatarow();
+                }
+                Datapoint d;
+                strcpy(d.strtime, strtime);
+                d.time = time;
+                d.value = value;
+                current->push_back(d);
 	}
 
 	void endDatarow() {
-	  if (current) {
-	    datarows.push_back(current);
-	    current = 0;
-	  }
+                if (current) {
+                        datarows.push_back(current);
+                        current = 0;
+                }
 	}
 
-
-	  /*
-	  std::cout << "Datastreqm print begin" << std::endl;
-	  std::cout << "data row count: " << datarows.size() << std::endl;
-	  for (std::vector<Datarow*>::const_iterator it = datarows.begin(); it != datarows.end(); ++it) {
-
-	    const Datarow * dr = (*it);
-	    std::cout << "datapoints count: " << dr->size() << std::endl;
-	    for (std::vector<Pair>::const_iterator itb = dr->begin(); itb != dr->end(); ++itb) {
-	      const Pair& p = (*itb);
-	      //std::cout << "date: " << p.date << " value: " << p.value << std::endl;
-	    };
-	  };
-	  */
-
-
-        // Classic Storage
-	std::vector<Pair> datapoints;
-
-        // "Contiguous" storage
-	typedef std::vector<Pair> Datarow;
-	std::vector<Datarow*> datarows;
-
-	Datarow * current;
 	
         struct JS {
-                
-                static void Initialize(Handle<ObjectTemplate> global, Isolate* i);
-                
+
+                // Create a mew instance of javascript object "Datastream"
+                static Local<Object> GetNewInstance(Isolate * i);
+
+                // Register function wich create javascript object "Datastream" in global scope
+                static void Register(Handle<ObjectTemplate> global, Isolate* i);                
                 static void Constructor(const FunctionCallbackInfo<Value>& info);
                 static void Load(const FunctionCallbackInfo<Value>& info);
                 static void Select(const FunctionCallbackInfo<Value>& info);
+                static void ComputationTime(Local<String> property, const PropertyCallbackInfo<Value> &info);
+
                 static void GetDatapoints(Local<String> property, const PropertyCallbackInfo<Value> &info);
                 static void GetX(Local<String> property, const PropertyCallbackInfo<Value> &info);
 
+                // Fill 'obj' with datastream properties
+                static void SetupObject(Local<Object> obj, const Datastream * d, Isolate* i);
+                
         }; // end struc JS
 };
 

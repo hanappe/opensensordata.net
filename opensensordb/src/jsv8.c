@@ -8,7 +8,10 @@
 
 #include "v8/jsengine.h"
 #include "v8/point.h"
+#include "v8/group.h"
 #include "v8/datastream.h"
+#include "v8/photostream.h"
+
 
 using namespace v8;
 
@@ -44,9 +47,11 @@ using namespace v8;
                 global->Set(v8::String::NewFromUtf8(isolate, "version"),
                             v8::FunctionTemplate::New(isolate, Version));
 
-                Point::JS::Initialize(global, isolate);
-                
-                Datastream::JS::Initialize(global, isolate);
+                Point::JS::Register(global, isolate);                
+                Group::JS::Register(global, isolate);
+                Datastream::JS::Register(global, isolate);
+                Photostream::JS::Register(global, isolate);
+
         
         }
 

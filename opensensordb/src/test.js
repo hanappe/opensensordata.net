@@ -1,4 +1,5 @@
-
+"HELLO WOLRD!"
+/*
 
 var start_date = new Date(args.start);
 var end_date = new Date(args.end);
@@ -18,3 +19,4 @@ if (points.length > 0)
 
 JSON.stringify(avg);
 
+*/

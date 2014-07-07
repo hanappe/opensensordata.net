@@ -22,7 +22,7 @@ struct Point {
         
         struct JS {
                 
-                static void Initialize(Handle<ObjectTemplate> global, Isolate* i) {
+                static void Register(Handle<ObjectTemplate> global, Isolate* i) {
                         global->Set(String::NewFromUtf8(i, "Point"), FunctionTemplate::New(i, Constructor));
                 }
 
