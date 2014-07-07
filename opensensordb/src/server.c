@@ -155,18 +155,21 @@ int path_parse(const char* path, list_t** nodes)
 
 
 
-static int openServerSocket(int port) 
+static int openServerSocket(const char* address, int port) 
 {
         struct sockaddr_in sockaddr;
         struct in_addr addr;
         int serverSocket = -1;
 
-        int r = inet_aton("127.0.0.1", &addr);
-        if (r == 0) {
-                log_err("Daemon: Failed to convert '127.0.0.1' to an IP address...?!\n");
-                return -1;
+        if ((address != NULL) && (strcmp(address, "any") != 0)) {
+                int r = inet_aton(address, &addr);
+                if (r == 0) {
+                        log_err("Daemon: Failed to convert '%s' to an IP address...?!\n", address);
+                        return -1;
+                }
+        } else {
+                addr.s_addr = htonl(INADDR_ANY);
         }
-        //addr.s_addr = htonl(INADDR_ANY);
 
         serverSocket = socket(AF_INET, SOCK_STREAM, 0);
         if (serverSocket == -1) {
@@ -988,7 +991,7 @@ int main(int argc, char **argv)
         err = signalisation();
         if (err != 0) exit(1);
 
-        serverSocket = openServerSocket(port);
+        serverSocket = openServerSocket(NULL, port);
         if (serverSocket == -1) exit(1);
 
         request_t req;
