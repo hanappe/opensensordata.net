@@ -17,13 +17,14 @@ DAEMON=/usr/local/bin/opensensordb
 OPENSENSORDB_OPTS=''
 OPENSENSORDB_LOG_FILE=/var/log/opensensordb.log
 OPENSENSORDB_PID_FILE=/var/run/opensensordb.pid
+OPENSENSORDB_DIR=/var/lib/opensensordb
 
 test -x $DAEMON || exit 0
 
 . /lib/lsb/init-functions
 
 opensensordb_start() {
-    $DAEMON -P $OPENSENSORDB_PID_FILE -L $OPENSENSORDB_LOG_FILE $OPENSENSORDB_OPTS
+    $DAEMON -P $OPENSENSORDB_PID_FILE -L $OPENSENSORDB_LOG_FILE -o dir=$OPENSENSORDB_DIR $OPENSENSORDB_OPTS
 }
 
 opensensordb_stop() {
