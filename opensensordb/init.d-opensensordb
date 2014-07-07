@@ -1,0 +1,65 @@
+#! /bin/sh
+
+### BEGIN INIT INFO
+# Provides:          opensensordb
+# Required-Start:    
+# Required-Stop:     
+# Should-Start:      
+# Default-Start:     2 3 4 5
+# Default-Stop:      
+# Short-Description: OpenSensorData database
+# Description:       .
+### END INIT INFO
+
+# /etc/init.d/rsync: start and stop the rsync daemon
+
+DAEMON=/usr/local/bin/opensensordb
+OPENSENSORDB_OPTS=''
+OPENSENSORDB_LOG_FILE=/var/log/opensensordb.log
+OPENSENSORDB_PID_FILE=/var/run/opensensordb.pid
+
+test -x $DAEMON || exit 0
+
+. /lib/lsb/init-functions
+
+opensensordb_start() {
+    $DAEMON -P $OPENSENSORDB_PID_FILE -L $OPENSENSORDB_LOG_FILE $OPENSENSORDB_OPTS
+}
+
+opensensordb_stop() {
+    kill -TERM $(cat $OPENSENSORDB_PID_FILE) >/dev/null
+}
+
+
+case "$1" in
+  start)
+	log_daemon_msg "Starting opensensordb daemon" "opensensordb"
+	if [ -s $OPENSENSORDB_PID_FILE ] && kill -0 $(cat $OPENSENSORDB_PID_FILE) >/dev/null 2>&1; then
+	    log_progress_msg "apparently already running"
+	    log_end_msg 0
+	    exit 0
+	fi
+        opensensordb_start
+	;;
+  stop)
+	log_daemon_msg "Stopping opensensordb daemon" "opensensordb"
+        opensensordb_stop
+	rm -f $OPENSENSORDB_PID_FILE
+	;;
+
+  reload|force-reload)
+	;;
+
+  restart)
+        opensensordb_stop
+        opensensordb_start
+	;;
+
+  status)
+	;;
+  *)
+	echo "Usage: /etc/init.d/opensensordb {start|stop|reload|force-reload|restart|status}"
+	exit 1
+esac
+
+exit 0
