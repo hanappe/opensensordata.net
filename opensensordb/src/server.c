@@ -12,6 +12,9 @@
 #include <fcntl.h>
 #include <arpa/inet.h>
 #include <signal.h>
+#include <sys/types.h>
+#include <pwd.h>
+#include <grp.h>
 
 #include "osdb_priv.h"
 #include "server.h"
@@ -22,6 +25,8 @@
 
 static const char* pidFile = "/var/run/opensensordb.pid";
 static const char* logFile = "/var/log/opensensordb.log";
+static const char* user = "opensensordata";
+static const char* group = "opensensordata";
 static int port = 10081;
 static int nodaemon = 0;
 static int serverSocket = -1;
@@ -451,6 +456,41 @@ int daemonise()
 	return 0;
 }
 
+int drop_privileges() 
+{
+	if (getuid() == 0) {
+		char stringBuf[2048];
+		struct passwd pwbuf;
+		struct passwd *pwbufp = 0;
+                struct group gbuf;
+                struct group *gbufp = 0;
+
+		if (getpwnam_r(user, &pwbuf, stringBuf, 2048, &pwbufp) != 0) {
+			log_err(0, "Failed to obtain the UID associated with the user '%s'", user);
+                        return -1;
+		}
+
+                if (getgrnam_r(group, &gbuf, stringBuf, 2048, &gbufp) != 0) {
+			log_err(0, "Failed to obtain the GID associated with the group '%s'", group);
+                        return -1;
+                }
+
+		uid_t uid = pwbuf.pw_uid;
+		gid_t gid = gbuf.gr_gid;
+
+		if (setgid(gid) != 0) {
+			log_err("Failed to set the group ID");
+                        return -1;
+		}
+		if (setuid(uid) != 0) {
+			log_err("Failed to set the user ID");
+                        return -1;
+		}
+	}
+
+	return 0;
+}
+
 void sighandler(int signum)
 {
 	if ((signum == SIGINT) || (signum == SIGHUP) || (signum == SIGTERM)) {
@@ -518,7 +558,7 @@ void parse_option(const char* s)
 
 void parse_arguments(int argc, char **argv)
 {
-        static const char short_options [] = "hvnP:L:p:o:";
+        static const char short_options [] = "hvnP:L:p:o:u:g:";
 
         static const struct option
                 long_options [] = {
@@ -529,6 +569,8 @@ void parse_arguments(int argc, char **argv)
                 { "port",       required_argument, NULL, 'p' },
                 { "nodaemon",   no_argument, NULL, 'n' },
                 { "option",     required_argument, NULL, 'o' },
+                { "user",       required_argument, NULL, 'u' },
+                { "group",      required_argument, NULL, 'g' },
                 { 0, 0, 0, 0 }
         };
 
@@ -564,6 +606,12 @@ void parse_arguments(int argc, char **argv)
                         break;
                 case 'o':
                         parse_option(optarg);
+                        break;
+                case 'u':
+                        user = optarg;
+                        break;
+                case 'g':
+                        group = optarg;
                         break;
 
                 default:
@@ -931,6 +979,9 @@ int main(int argc, char **argv)
                 if (err != 0) exit(1);
 
                 err = writePidFile(pidFile);
+                if (err != 0) exit(1);
+
+                err = drop_privileges();
                 if (err != 0) exit(1);
         }
 
