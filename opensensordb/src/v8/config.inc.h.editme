@@ -1,6 +1,8 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
-#define PWD "xxxx"
+#define DB_DATABASE "opensensordata"
+#define DB_USER "opensensordata"
+#define DB_PASSWORD "xxxx"
 
 #endif

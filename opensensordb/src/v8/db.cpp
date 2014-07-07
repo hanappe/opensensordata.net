@@ -26,9 +26,9 @@ DB::DB() : mMysql(0x0) {
         
         const std::string host = "localhost"; // 111
         
-        const std::string usr = "opensensordata";
-        const std::string pwd = PWD; // see config.inc.h
-        const std::string db = "opensensordata";
+        const std::string usr = DB_USER;
+        const std::string pwd = DB_PASSWORD; // see config.inc.h
+        const std::string db = DB_DATABASE;
         if (!mysql_real_connect(mMysql,
                                 host.data(),
                                 usr.data(),
