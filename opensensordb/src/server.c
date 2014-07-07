@@ -156,7 +156,7 @@ static int openServerSocket(const char* address, int port)
         struct in_addr addr;
         int serverSocket = -1;
 
-        if ((address != NULL) && (strcmp(address, "any" != 0))) {
+        if ((address != NULL) && (strcmp(address, "any") != 0)) {
                 int r = inet_aton(address, &addr);
                 if (r == 0) {
                         log_err("Daemon: Failed to convert '%s' to an IP address...?!\n", address);
@@ -940,7 +940,7 @@ int main(int argc, char **argv)
         err = signalisation();
         if (err != 0) exit(1);
 
-        serverSocket = openServerSocket(port);
+        serverSocket = openServerSocket(NULL, port);
         if (serverSocket == -1) exit(1);
 
         request_t req;
