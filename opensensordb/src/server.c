@@ -977,6 +977,8 @@ int main(int argc, char **argv)
 
         parse_arguments(argc, argv);
 
+        log_set_file(logFile);
+
         if (nodaemon == 0) {
                 err = daemonise();
                 if (err != 0) exit(1);
