@@ -1,7 +1,7 @@
 
 #include "osdb_priv.h"
 
-static const char* _dir = "/tmp"; 
+static const char* _dir = "/var/lib/opensensordb"; 
 
 
 enum {
