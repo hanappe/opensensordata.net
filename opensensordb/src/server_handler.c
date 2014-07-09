@@ -121,7 +121,7 @@ void server_handle_script(request_t* request, response_t* response)
                 return;
         }
 
-        log_info("Executing script: %s", code);
+        log_info("Executing script: %s", script);
 
         char* result = server_execute_script(code, request->args);
 
