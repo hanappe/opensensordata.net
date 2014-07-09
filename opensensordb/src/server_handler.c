@@ -121,6 +121,8 @@ void server_handle_script(request_t* request, response_t* response)
                 return;
         }
 
+        log_info("Executing script: %s", code);
+
         char* result = server_execute_script(code, request->args);
 
         filemanager_release_script(code);

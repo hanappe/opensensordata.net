@@ -994,6 +994,8 @@ int main(int argc, char **argv)
         serverSocket = openServerSocket(NULL, port);
         if (serverSocket == -1) exit(1);
 
+        log_info("Server ready for connections");
+
         request_t req;
         response_t resp;
 
@@ -1013,18 +1015,19 @@ int main(int argc, char **argv)
                         continue;
                 }
 
+                log_info("Request: %s", req.path);
+
                 if (1) {
-                        printf("path: %s\n", req.path);
                         list_t* l = req.args;
                         while (l) {
                                 pair_t* p = (pair_t*) l->data;
-                                printf("args[]: %s = %s\n", p->name, p->value);
+                                log_debug("args[]: %s = %s", p->name, p->value);
                                 l = l->next;
                         }
                         l = req.headers;
                         while (l) {
                                 pair_t* p = (pair_t*) l->data;
-                                printf("headers[]: '%s': '%s'\n", p->name, p->value);
+                                log_debug("headers[]: '%s': '%s'", p->name, p->value);
                                 l = l->next;
                         }
                 }

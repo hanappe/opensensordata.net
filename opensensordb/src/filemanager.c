@@ -742,9 +742,8 @@ int filemanager_get_script(const char* account, const char* name, char** script)
         char a = account[0];
         char b = account[1];
 
-        //Kev
-        //snprintf(path, 512, "%s/%c/%c/%s/scripts/%s.js", _dir, a, b, account, name);
-        snprintf(path, 512, "%s/%c/%c/%s/scripts/%s", _dir, a, b, account, name);
+        snprintf(path, 512, "%s/%c/%c/%s/scripts/%s.js", _dir, a, b, account, name);
+        //snprintf(path, 512, "%s/%c/%c/%s/scripts/%s", _dir, a, b, account, name);
 
         if ((stat(path, &sb) != 0)
             || !S_ISREG(sb.st_mode)
