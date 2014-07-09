@@ -734,8 +734,13 @@ int filemanager_get_script(const char* account, const char* name, char** script)
 
         *script = NULL;
 
-        if (!_is_name_valid(account)
-            || !_is_filename_valid(name)) {
+        if (!_is_name_valid(account)) {
+                log_info("Invalid account name: %s", account);
+                return -1;
+        }
+
+        if (!_is_filename_valid(name)) {
+                log_info("Invalid script name: %s", name);
                 return -1;
         }
 
@@ -748,10 +753,11 @@ int filemanager_get_script(const char* account, const char* name, char** script)
         if ((stat(path, &sb) != 0)
             || !S_ISREG(sb.st_mode)
             || (sb.st_size == 0)) {
+                log_info("Script not found '%s': %s", name, path);
                 return -2;
         }
 
-        char* buffer = (char *)malloc(sb.st_size + 1);
+        char* buffer = (char *) malloc(sb.st_size + 1);
         FILE* fp = fopen(path, "r");
         if (fp == NULL)
                 return -3;
@@ -759,6 +765,7 @@ int filemanager_get_script(const char* account, const char* name, char** script)
         size_t n = fread(buffer, 1, sb.st_size, fp);
         if (n != (size_t) sb.st_size) {
                 fclose(fp);
+                log_info("Failed to read the script '%s': %s", name, path);
                 return -3;
         }
 
