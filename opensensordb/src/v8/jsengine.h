@@ -26,6 +26,8 @@ void Load(const v8::FunctionCallbackInfo<v8::Value>& args);
 void Quit(const v8::FunctionCallbackInfo<v8::Value>& args);
 void Version(const v8::FunctionCallbackInfo<v8::Value>& args);
 v8::Handle<v8::String> ReadFile(v8::Isolate* isolate, const char* name);
+void Exit(const v8::FunctionCallbackInfo<v8::Value>& args);
+
 void ReportException(v8::Isolate* isolate, v8::TryCatch* handler);
 
 const char* ToCString(const v8::String::Utf8Value& value);

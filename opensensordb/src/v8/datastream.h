@@ -55,44 +55,21 @@ public:
 	void clear();
         void clearContiguous();
 
+        Handle<Array> select(Isolate * i, time_t start, time_t end) const;
+        Handle<Array> select2(Isolate * i, time_t start, time_t end) const;
+
 	Handle<Array> toV8Array(Isolate * i) const;
         Handle<Array> toV8ArrayContiguous(Isolate * i);
 
         // Simple way
 
-        void appendDatapoints(char * strtime, time_t time, double value) {
-                Datapoint d;
-                strcpy(d.strtime, strtime);
-                d.time = time;
-                d.value = value;
-
-                datapoints.push_back(d);
-	}
+        void appendDatapoints(char * strtime, time_t time, double value);
 
         // Contiguous way
 	
-	void beginDatarow() {
-                current = new Datarow;
-	}
-
-	void append(char * strtime, time_t time, double value) {
-                if (!current) {
-                        beginDatarow();
-                }
-                Datapoint d;
-                strcpy(d.strtime, strtime);
-                d.time = time;
-                d.value = value;
-                current->push_back(d);
-	}
-
-	void endDatarow() {
-                if (current) {
-                        datarows.push_back(current);
-                        current = 0;
-                }
-	}
-
+	void beginDatarow();
+	void append(char * strtime, time_t time, double value);
+	void endDatarow();
 	
         struct JS {
 
@@ -104,7 +81,10 @@ public:
                 static void Constructor(const FunctionCallbackInfo<Value>& info);
                 static void Load(const FunctionCallbackInfo<Value>& info);
                 static void Select(const FunctionCallbackInfo<Value>& info);
-                static void ComputationTime(Local<String> property, const PropertyCallbackInfo<Value> &info);
+                static void Select2(const FunctionCallbackInfo<Value>& info);
+                static void SelectZ(const FunctionCallbackInfo<Value>& info);
+                static void ComputationTime(const FunctionCallbackInfo<Value>& info);
+                static void TotalTime(const FunctionCallbackInfo<Value>& info);
 
                 static void GetDatapoints(Local<String> property, const PropertyCallbackInfo<Value> &info);
                 static void GetX(Local<String> property, const PropertyCallbackInfo<Value> &info);

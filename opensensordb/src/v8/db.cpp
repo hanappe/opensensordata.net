@@ -5,6 +5,7 @@
 
 #include "utils.h"
 
+#include "account.h"
 #include "group.h"
 #include "datastream.h"
 #include "photostream.h"
@@ -62,6 +63,107 @@ DB * DB::GetInstance() {
 }
 
 
+bool DB::loadAccount(Account * account, int id) {
+        
+
+        if (account && isConnected()) {
+                std::ostringstream s;
+
+                // Get account info
+
+                s << "SELECT id, username, email FROM `account` WHERE `id`=";
+                s << id;
+                s << ";";
+                
+                const std::string& q1 = s.str();
+
+                bool account_loaded = false;
+                if(mysql_real_query(mMysql, q1.data(), q1.size()) == 0) { // success    
+
+
+                        
+                        MYSQL_ROW row;
+                        MYSQL_RES * res = 0;
+                        my_ulonglong num_rows = 0;
+                        
+                        res = mysql_store_result(mMysql);
+                        num_rows = mysql_num_rows(res);
+                        
+                        if (num_rows != 1) {
+                                fprintf(stderr, "DB::loadAccount error no account found, or multiple account found.\n");
+                                return false;
+                        }
+
+                        account_loaded = true;
+       
+                        while ((row = mysql_fetch_row(res)) != NULL) {
+                                
+                                if (row[0]) {
+                                        account->id = atoi(row[0]);
+                                }
+                                
+                                char * username = row[1];
+                                if (username && strlen(username) < 512) {
+                                        strcpy(account->username, username);
+                                } else {
+                                        fprintf(stderr, "loadAccount error, invalid username.\n");
+                                }
+
+                                char * email = row[2];
+                                if (email && strlen(email) < 512) {
+                                        strcpy(account->email, email);
+                                } else {
+                                        fprintf(stderr, "loadAccount error, invalid name.\n");
+                                }
+                                
+                        } //end while
+                        mysql_free_result(res);
+                } // end if
+
+                if (!account_loaded) {
+                        fprintf(stderr, "DB::loadAccount account not found\n");
+                        return false;
+                }
+
+                // Load Group
+
+                std::ostringstream s2;
+                s2 << "SELECT `id`,`name`,`description` FROM `group` WHERE `owner`=";
+                s2 << id;
+                s2 << ";";
+
+                const std::string& q2 = s2.str();
+
+                if(mysql_real_query(mMysql, q2.data(), q2.size()) == 0) { // success    
+
+                        MYSQL_ROW row;
+                        MYSQL_RES * res = 0;
+                        my_ulonglong num_rows = 0;
+                        
+                        res = mysql_store_result(mMysql);
+                        num_rows = mysql_num_rows(res);
+
+                        while ((row = mysql_fetch_row(res)) != NULL) {
+
+                                int group_id = 0;
+                                if (row[0]) {
+                                      group_id  = atoi(row[0]);
+                                      Group * group = new Group;
+                                      loadGroup(group, group_id);
+                                      account->groups.push_back(group);
+                                }
+                        } //end while
+                        mysql_free_result(res);
+                } // end if
+                
+                //fprintf(stderr, "'datetime' doesn't exist in this datapoint row...\n");
+                
+        } // end account && isConnected
+ 
+        return true;
+}
+
+
 bool DB::loadGroup(Group * group, int id) {
         
 
@@ -87,7 +189,11 @@ bool DB::loadGroup(Group * group, int id) {
                         
                         res = mysql_store_result(mMysql);
                         num_rows = mysql_num_rows(res);
-                        
+
+                        if (num_rows != 1) {
+                                return false;
+                        }
+
                         while ((row = mysql_fetch_row(res)) != NULL) {
                                 
                                 if (row[0]) {
@@ -108,6 +214,7 @@ bool DB::loadGroup(Group * group, int id) {
                                         fprintf(stderr, "loadGroup error, invalid name.\n");
                                 }                                
                         } //end while
+                        mysql_free_result(res);
                 } // end if
 
                 if (!group_loaded) {
@@ -135,15 +242,16 @@ bool DB::loadGroup(Group * group, int id) {
 
                         while ((row = mysql_fetch_row(res)) != NULL) {
 
-                                
                                 int datastream_id = 0;
                                 if (row[0]) {
                                       datastream_id  = atoi(row[0]);
                                       Datastream * datastream = new Datastream;
                                       loadDatastream(datastream, datastream_id);
+                                      //loadDatastreamContiguous(datastream, datastream_id);
                                       group->datastreams.push_back(datastream);
                                 }
                         } //end while
+                        mysql_free_result(res);
                 } // end if
 
                 //fprintf(stderr, "'datetime' doesn't exist in this datapoint row...\n");
@@ -178,6 +286,7 @@ bool DB::loadGroup(Group * group, int id) {
                                         group->photostreams.push_back(photostream);
                                 }
                         } //end while
+                        mysql_free_result(res);
                 } // end if
                 
                 //fprintf(stderr, "'datetime' doesn't exist in this datapoint row...\n");
@@ -204,7 +313,7 @@ bool DB::loadDatastream(Datastream * datastream, int id) {
                 
                 if(mysql_real_query(mMysql, q1.data(), q1.size()) == 0) { // success    
                         
-                        result = true;
+
                         MYSQL_ROW row;
                         MYSQL_RES * res = 0;
                         my_ulonglong num_rows = 0;
@@ -213,8 +322,11 @@ bool DB::loadDatastream(Datastream * datastream, int id) {
                         num_rows = mysql_num_rows(res);
                        
                         if (num_rows != 1) {
+                                mysql_free_result(res);
                                 return false;
                         }
+
+                        result = true;
 
                         while ((row = mysql_fetch_row(res)) != NULL) {
                                 // GET DATAPOINTS
@@ -228,20 +340,21 @@ bool DB::loadDatastream(Datastream * datastream, int id) {
                                 }
                                 
                                 char * name = row[2];
-                                if (name && strlen(name) < 256) {
+                                if (name && strlen(name) < 512) {
                                         strcpy(datastream->name, name);
                                 } else {
                                         fprintf(stderr, "loadDatastream error, invalid name.\n");
                                 }
                                 
                                 char * desc = row[3];
-                                if (name && strlen(desc) < 256) {
+                                if (name && strlen(desc) < 512) {
                                         strcpy(datastream->description, desc);
                                 } else {
                                         fprintf(stderr, "loadDatastream error, invalid description.\n");
                                 }                                
                                 
                         } //end while
+                        mysql_free_result(res);
                 }
 
                 //std::cout << "DB::loadDatastream result B " << result << std::endl;
@@ -272,21 +385,30 @@ bool DB::loadDatastream(Datastream * datastream, int id) {
                         num_rows = mysql_num_rows(res);
                         
                         while ((row = mysql_fetch_row(res)) != NULL) {
-                                // GET DATAPOINTS
+
+                                // Simple Way
+
                                 if (row[0] && row[1]) { // datetime and value
                                         const time_t time = atoi(row[0]);
                                         const double value = atof(row[1]);
-                                        //std::cout << "DB::loadDatastream value " << value << std::endl;                                        
+
                                         datastream->appendDatapoints(row[0], time, value);
+
+                                        // Contiguous way
+                                        datastream->append(row[0], time, value);
                                 } else {
                                         if (!row[0]) {
                                                 fprintf(stderr, "'datetime' doesn't exist in this datapoint row...\n");
                                         } else if (!row[1]) {
-                                                //fprintf(stderr, "end row A\n");
+                                                // Contiguous Way
+                                                datastream->endDatarow();
                                         }
                                 }
+
                                 
                         } // end while
+                        datastream->endDatarow();
+                        mysql_free_result(res);
                 } // end if
 
                 //std::cout << "DB::loadDatastream result B" << result << std::endl;
@@ -338,11 +460,11 @@ bool DB::loadDatastreamContiguous(Datastream * datastream, int id) {
                                         }
                                 }
                                 
-                        } //end while
+                        } // end while
                         
                         datastream->endDatarow();
-                        
-                }
+                        mysql_free_result(res);
+                } // end if
         }
         
         return result;
@@ -399,7 +521,8 @@ bool DB::loadPhotostream(Photostream * photostream, int id) {
                                 
                                 
                         } //end while
-                }
+                        mysql_free_result(res);
+                } // end if
 
                 //REMOVE THIS
                 //return true;
@@ -427,6 +550,7 @@ bool DB::loadPhotostream(Photostream * photostream, int id) {
                         while ((row = mysql_fetch_row(res)) != NULL) {
                                 // Get PhotoInfo
                                 if (row[0] && row[1]) { // datetime and value
+                                        
                                         PhotoInfo info;
                                         info.datetime = atoi(row[0]);
                                         char * filename = row[1];
@@ -446,6 +570,7 @@ bool DB::loadPhotostream(Photostream * photostream, int id) {
                                 }
                                 
                         } // end while
+                        mysql_free_result(res);
                 } // end if
         }
        

@@ -45,15 +45,6 @@ Local<Object> Photostream::JS::GetNewInstance(Isolate * i) {
         Handle<ObjectTemplate> ps_template = ObjectTemplate::New();
         ps_template->SetInternalFieldCount(1);
         
-        // First Way : create the datapoints one time and store it into javascript Photostream object.
-        Handle<Array> array = Array::New(i, 3);
-        //ps_template->Set(String::NewFromUtf8(i, "datapoints"), array);
-        //ps_template->Set(String::NewFromUtf8(i, "datapoints_contiguous"), array);
-        
-        // Second way : call the c++ function "GetDatapoints" (and create a javascript array) each time "datapoints" is called in javascript
-        //ps_template->SetAccessor(String::NewFromUtf8(i, "datapointsFromAccessor"), GetDatapoints);
-        
-        // set a javascript function WIP
         ps_template->Set(String::NewFromUtf8(i, "load"), FunctionTemplate::New(i, Load));
         
         Local<Object> obj = ps_template->NewInstance();
@@ -79,7 +70,7 @@ void Photostream::JS::SetupObject(Local<Object> obj, const Photostream * ps, Iso
 
         Handle<Array> photoinfos_array = Array::New(i, photoinfos.size());
 
-        std::cout << "Photostream::JS::SetupObject photosinfos: " << photoinfos.size() << std::endl;
+        //std::cout << "Photostream::JS::SetupObject photosinfos: " << photoinfos.size() << std::endl;
         
         int photoinfos_count = 0;
         for (std::vector<PhotoInfo>::const_iterator it = photoinfos.begin(); it != photoinfos.end(); ++it, photoinfos_count++) {                
