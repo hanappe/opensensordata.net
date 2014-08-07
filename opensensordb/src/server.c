@@ -468,13 +468,13 @@ int drop_privileges()
                 struct group gbuf;
                 struct group *gbufp = 0;
 
-		if (getpwnam_r(user, &pwbuf, stringBuf, 2048, &pwbufp) != 0) {
-			log_err(0, "Failed to obtain the UID associated with the user '%s'", user);
+		if (getpwnam_r(user, &pwbuf, stringBuf, 2048, &pwbufp) != 0 || pwbufp != &pwbuf) {
+			log_err("Failed to obtain the UID associated with the user '%s'", user);
                         return -1;
 		}
 
-                if (getgrnam_r(group, &gbuf, stringBuf, 2048, &gbufp) != 0) {
-			log_err(0, "Failed to obtain the GID associated with the group '%s'", group);
+                if (getgrnam_r(group, &gbuf, stringBuf, 2048, &gbufp) != 0 || gbufp != &gbuf) {
+			log_err("Failed to obtain the GID associated with the group '%s'", group);
                         return -1;
                 }
 
