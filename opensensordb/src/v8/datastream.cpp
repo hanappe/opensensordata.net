@@ -20,15 +20,17 @@ Datastream::Datastream() :
         ownerId(0),
         current(0x0)
 {
+        std::cout << "Datastream::Datastream()" << std::endl;
         memset(name, 0, sizeof(name));
         memset(description, 0, sizeof(description));
 }
 	
 Datastream::~Datastream() {
+        std::cout << "Datastream::~Datastream()" << std::endl;
+        
         clear();
-        clearContiguous();
+        //clearContiguous();
 }
-
 
 bool Datastream::load(int id) {
         clear();
@@ -59,7 +61,7 @@ void Datastream::clear() {
 
         for (std::vector<Datarow*>::iterator it = datarows.begin(); it != datarows.end(); ++it) {
                 delete (*it);
-        };
+        }
 
         datarows.clear();
 
@@ -234,9 +236,7 @@ Handle<Array> Datastream::select2(Isolate * iso, time_t start, time_t end) const
 
 // Datastream::JS
 
-Local<Object> Datastream::JS::GetNewInstance(Isolate * i) {
-
-        //std::cout << "Datastream::JS::GetNewInstance" << std::endl;
+Handle<ObjectTemplate> Datastream::JS::GetNewTemplate(Isolate * i) {
 
         Handle<ObjectTemplate> ds_template = ObjectTemplate::New();
         ds_template->SetInternalFieldCount(1);
@@ -255,10 +255,19 @@ Local<Object> Datastream::JS::GetNewInstance(Isolate * i) {
         ds_template->Set(String::NewFromUtf8(i, "computationTime"), FunctionTemplate::New(i, ComputationTime));
         ds_template->Set(String::NewFromUtf8(i, "totalTime"), FunctionTemplate::New(i, TotalTime));
 
+        return ds_template;
+}
+
+/*
+Local<Object> Datastream::JS::GetNewInstance(Isolate * i) {
+
+        //std::cout << "Datastream::JS::GetNewInstance" << std::endl;
+
+        Handle<ObjectTemplate> ds_template = GetNewTemplate(i);
         Local<Object> obj = ds_template->NewInstance();
         return obj;
 }
-
+*/
 void Datastream::JS::SetupObject(Local<Object> obj, const Datastream * d, Isolate* i) {
 
         if (!d) {
@@ -315,9 +324,12 @@ void Datastream::JS::Constructor(const FunctionCallbackInfo<Value>& info) {
                 Local<Object> obj = ds_template->NewInstance();
                 */
 
-                Local<Object> obj = GetNewInstance(i);
+                //Local<Object> obj = GetNewInstance(i);
+                Handle<ObjectTemplate> ds_template = GetNewTemplate(i);
+                Local<Object> obj = ds_template->NewInstance();
 
                 obj->SetInternalField(0, External::New(i, datastream));
+                AddToRef(datastream);
                 // Create and Return this newly created object
                 info.GetReturnValue().Set(obj);
                 
@@ -683,3 +695,17 @@ void Datastream::JS::GetDatapoints(Local<String> property,
         info.GetReturnValue().Set(array);
 }   
 
+std::vector<Datastream*> Datastream::JS::references;
+
+void Datastream::JS::AddToRef(Datastream * datastream) {
+        references.push_back(datastream);
+}
+
+void Datastream::JS::DeleteAllRef() {
+        
+        for (std::vector<Datastream*>::iterator it = references.begin(); it != references.end(); ++it) {
+                delete (*it);
+        }
+
+        references.clear();        
+}

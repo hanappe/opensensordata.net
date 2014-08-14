@@ -2,22 +2,24 @@
 
 #include "db.h"
 
+
+
 // Photostream
 
 Photostream::Photostream() :
         id(0), 
  	ownerId(0) {
-        //memset(name, 0, sizeof(name));
-        //memset(description, 0, sizeof(description));
+        memset(name, 0, sizeof(name));
+        memset(description, 0, sizeof(description));
 }
 	
 Photostream::~Photostream() {
-        clear();
+        //clear();
 }
 	
 
 bool Photostream::load(int id) {
-        //clear();
+        clear();
         return DB::GetInstance()->loadPhotostream(this, id);  
 }
 
@@ -30,8 +32,8 @@ void Photostream::print() const {
 void Photostream::clear() {
         id = 0;
         ownerId = 0;
-        //memset(name, 0, sizeof(name));
-        //memset(description, 0, sizeof(description));
+        memset(name, 0, sizeof(name));
+        memset(description, 0, sizeof(description));
 }
 
 void Photostream::append(const PhotoInfo& photo) {
@@ -40,17 +42,21 @@ void Photostream::append(const PhotoInfo& photo) {
 
 // Photostream::JS
 
-Local<Object> Photostream::JS::GetNewInstance(Isolate * i) {
+Handle<ObjectTemplate> Photostream::JS::GetNewTemplate(Isolate * i) {
 
         Handle<ObjectTemplate> ps_template = ObjectTemplate::New();
         ps_template->SetInternalFieldCount(1);
         
         ps_template->Set(String::NewFromUtf8(i, "load"), FunctionTemplate::New(i, Load));
+        return ps_template;
+}
+/*
+Local<Object> Photostream::JS::GetNewInstance(Isolate * i) {
         
         Local<Object> obj = ps_template->NewInstance();
         return obj;
 }
-
+*/
 void Photostream::JS::SetupObject(Local<Object> obj, const Photostream * ps, Isolate* i) {
 
         if (!ps) {
@@ -103,7 +109,8 @@ void Photostream::JS::Constructor(const FunctionCallbackInfo<Value>& info) {
         
         if (photostream) {
 
-                Local<Object> obj = GetNewInstance(i);
+                Handle<ObjectTemplate> ps_template = GetNewTemplate(i);
+                Local<Object> obj = ps_template->NewInstance();
 
                 obj->SetInternalField(0, External::New(i, photostream));
                 // Create and Return this newly created object
@@ -144,5 +151,20 @@ void Photostream::JS::Load(const FunctionCallbackInfo<Value>& info ) {
         //Fill this "Photostream" javascript object With properties
 
         SetupObject(info.This(), photostream, isolate);
+}
+
+std::vector<Photostream*> Photostream::JS::references;
+
+void Photostream::JS::AddToRef(Photostream * photostream) {
+        references.push_back(photostream);
+}
+
+void Photostream::JS::DeleteAllRef() {
+        
+        for (std::vector<Photostream*>::iterator it = references.begin(); it != references.end(); ++it) {
+                delete (*it);
+        }
+
+        references.clear();        
 }
 

@@ -4,6 +4,12 @@
 #include "datastream.h"
 #include "photostream.h"
 
+Group::Group(int i) : id(i) {
+}
+
+Group::~Group() {
+        //clear();
+}
 
 bool Group::load(int id) {
         clear();
@@ -18,14 +24,13 @@ void Group::print() {
 }
 
 void Group::clear() {
-
-        for (std::vector<Datastream*>::iterator it = datastreams.begin(); it != datastreams.end(); ++it) {
-                delete (*it);
-        }
+        //for (std::vector<Datastream*>::iterator it = datastreams.begin(); it != datastreams.end(); ++it) {
+        //        delete (*it);
+        //}
         
-        for (std::vector<Photostream*>::iterator it = photostreams.begin(); it != photostreams.end(); ++it) {
-                delete (*it);
-        }
+        //for (std::vector<Photostream*>::iterator it = photostreams.begin(); it != photostreams.end(); ++it) {
+        //        delete (*it);
+        //}
 
 }
 
@@ -48,6 +53,18 @@ Handle<Array> Group::select(Isolate * iso, time_t start, time_t end) const {
 }
 
 
+Handle<ObjectTemplate> Group::JS::GetNewTemplate(Isolate * i) {
+        Handle<ObjectTemplate> group_template = ObjectTemplate::New();
+        group_template->SetInternalFieldCount(1);
+        
+        // set a javascript function
+        group_template->Set(String::NewFromUtf8(i, "load"), FunctionTemplate::New(i, Load));
+        group_template->Set(String::NewFromUtf8(i, "select"), FunctionTemplate::New(i, Select));
+        
+        return group_template;
+}
+
+/*
 Local<Object> Group::JS::GetNewInstance(Isolate * i) {
 
         Handle<ObjectTemplate> group_template = ObjectTemplate::New();
@@ -59,6 +76,7 @@ Local<Object> Group::JS::GetNewInstance(Isolate * i) {
         
         return group_template->NewInstance();
 }
+*/
 
 void Group::JS::SetupObject(Local<Object> obj, Group * g, Isolate* i) {
 
@@ -87,18 +105,15 @@ void Group::JS::SetupObject(Local<Object> obj, Group * g, Isolate* i) {
                 //Handle<Object> obj = Object::New(i);
                 
                 
-                Local<Object> ds_obj = Datastream::JS::GetNewInstance(i);
+                //Local<Object> ds_obj = Datastream::JS::GetNewInstance(i);
+
+                Handle<ObjectTemplate> ds_template = Datastream::JS::GetNewTemplate(i);
+                Local<Object> ds_obj = ds_template->NewInstance();
+
                 ds_obj->SetInternalField(0, External::New(i, datastream));
           
                 Datastream::JS::SetupObject(ds_obj, datastream, i); 
                 
-                /*obj->PrototypeTemplate().Set(
-                                            String::NewFromUtf8(i, "select"),
-                                            Datastream::JS::Select
-                                            //FunctionTemplate::New()->GetFunction()
-                                            //FunctionTemplate::New(MyWheelsMethodCallback)->GetFunction();
-                                            );
-                */
                 //ds_template->Set(String::NewFromUtf8(i, "select"), FunctionTemplate::New(i, Select));
                 datastreams_array->Set(datastream_count, ds_obj);
         }
@@ -120,12 +135,14 @@ void Group::JS::SetupObject(Local<Object> obj, Group * g, Isolate* i) {
         for (std::vector<Photostream*>::iterator it = photostreams.begin(); it != photostreams.end(); ++it, photostream_count++) {
                 Photostream * photostream = (*it);
 
-                Local<Object> ps_obj = Photostream::JS::GetNewInstance(i);
+                Handle<ObjectTemplate> ps_template = Photostream::JS::GetNewTemplate(i);
+                Local<Object> ps_obj = ps_template->NewInstance();
+
                 ps_obj->SetInternalField(0, External::New(i, photostream));
           
-                Photostream::JS::SetupObject(obj, photostream, i); 
+                Photostream::JS::SetupObject(ps_obj, photostream, i); 
                 
-                datastreams_array->Set(photostream_count, obj);
+                photostreams_array->Set(photostream_count, ps_obj);
         }
 
         obj->Set(String::NewFromUtf8(i, "photostreams"), photostreams_array);
@@ -147,7 +164,8 @@ void Group::JS::Constructor(const FunctionCallbackInfo<Value>& info) {
         
         if (group) {
 
-                Local<Object> obj = GetNewInstance(i);
+                Handle<ObjectTemplate> g_template= GetNewTemplate(i);
+                Local<Object> obj = g_template->NewInstance();
                 obj->SetInternalField(0, External::New(i, group));
                 // Create and Return this newly created object
                 info.GetReturnValue().Set(obj);
@@ -297,4 +315,20 @@ void Group::JS::Select(const FunctionCallbackInfo<Value>& info)  {
 
                 info.GetReturnValue().Set(datastreams_array);
         }
+}
+
+
+std::vector<Group*> Group::JS::references;
+
+void Group::JS::AddToRef(Group * group) {
+        references.push_back(group);
+}
+
+void Group::JS::DeleteAllRef() {
+        
+        for (std::vector<Group*>::iterator it = references.begin(); it != references.end(); ++it) {
+                delete (*it);
+        }
+
+        references.clear();        
 }

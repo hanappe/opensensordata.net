@@ -26,12 +26,8 @@ using namespace v8;
 class Group {
 public:
 
-        Group(int i = 0) : id(i) {
-	}
-	
-	~Group() {
-                clear();
-	}
+        Group(int i = 0);
+	~Group();
 
         bool load(int id);
 	void print();
@@ -41,7 +37,7 @@ public:
 
 	int id; // Group Id
 	int ownerId; // Owner Id
-        char name[256];
+        char name[512];
 
 	std::vector<Datastream*> datastreams;
 	std::vector<Photostream*> photostreams;
@@ -49,7 +45,8 @@ public:
         struct JS {
 
                 // Create a mew instance of javascript object "Datastream"
-                static Local<Object> GetNewInstance(Isolate * i);
+                //static Local<Object> GetNewInstance(Isolate * i);
+                static Handle<ObjectTemplate> GetNewTemplate(Isolate * i);
 
                 // Register function wich create javascript object "Datastream" in global scope
                 static void Register(Handle<ObjectTemplate> global, Isolate* i);
@@ -59,7 +56,14 @@ public:
 
                 // Fill 'obj' with datastream properties
                 static void SetupObject(Local<Object> obj, Group * g, Isolate* i);
-        }; // end struc JS
+                
+                // Reference to all cpp object (needed to delete them)
+                static std::vector<Group*> references;
+
+                static void AddToRef(Group * group);
+                static void DeleteAllRef();
+                
+        }; // end struct JS
 };
 
 #endif // GROUPV8_H

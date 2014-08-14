@@ -73,8 +73,7 @@ public:
 	
         struct JS {
 
-                // Create a mew instance of javascript object "Datastream"
-                static Local<Object> GetNewInstance(Isolate * i);
+                static Handle<ObjectTemplate> GetNewTemplate(Isolate * i);
 
                 // Register function wich create javascript object "Datastream" in global scope
                 static void Register(Handle<ObjectTemplate> global, Isolate* i);                
@@ -91,8 +90,14 @@ public:
 
                 // Fill 'obj' with datastream properties
                 static void SetupObject(Local<Object> obj, const Datastream * d, Isolate* i);
+
+                // Reference to all cpp object (needed to delete them)
+                static std::vector<Datastream*> references;
+
+                static void AddToRef(Datastream * datastream);
+                static void DeleteAllRef();
                 
-        }; // end struc JS
+        }; // end struct JS
 };
 
 #endif // DATASTREAMV8_H
