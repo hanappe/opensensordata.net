@@ -1,5 +1,5 @@
-#ifndef GROUPV8_H
-#define GROUPV8_H
+#ifndef ACCOUNTV8_H
+#define ACCOUNTV8_H
 
 #include <v8.h>
 #include <assert.h>
@@ -15,56 +15,54 @@
 
 #include "utils.h"
 
-#include "datastream.h"
+#include "group.h"
 
 
-class Datastream;
-class Photostream;
+class Group;
 
 using namespace v8;
 
-class Group {
+class Account {
 public:
 
-        Group(int i = 0);
-	~Group();
+        Account();
+	~Account();
 
-        bool load(int id);
+        bool loadFromId(int id);
+        bool loadFromUsername(int id);
 	void print();
 	void clear();
 
         Handle<Array> select(Isolate * i, time_t start, time_t end) const;
 
-	int id; // Group Id
-	int ownerId; // Owner Id
-        char name[512];
+	int id; // Account Id
+        char username[512];
+        char email[512];
 
-	std::vector<Datastream*> datastreams;
-	std::vector<Photostream*> photostreams;
+	std::vector<Group*> groups;
 	
         struct JS {
 
-                // Create a mew instance of javascript object "Datastream"
-                //static Local<Object> GetNewInstance(Isolate * i);
+                // Create a mew template of javascript object "Accout"
                 static Handle<ObjectTemplate> GetNewTemplate(Isolate * i);
 
-                // Register function wich create javascript object "Datastream" in global scope
+                // Register function wich create javascript object "Account" in global scope
                 static void Register(Handle<ObjectTemplate> global, Isolate* i);
                 static void Constructor(const FunctionCallbackInfo<Value>& info);
                 static void Load(const FunctionCallbackInfo<Value>& info);
                 static void Select(const FunctionCallbackInfo<Value>& info);
 
-                // Fill 'obj' with datastream properties
-                static void SetupObject(Local<Object> obj, Group * g, Isolate* i);
+                // Fill 'obj' with account properties
+                static void SetupObject(Local<Object> obj, Account * a, Isolate* i);
                 
                 // Reference to all cpp object (needed to delete them)
-                static std::vector<Group*> references;
+                static std::vector<Account*> references;
 
-                static void AddToRef(Group * group);
+                static void AddToRef(Account * account);
                 static void DeleteAllRef();
                 
         }; // end struct JS
 };
 
-#endif // GROUPV8_H
+#endif // ACCOUNTV8_H
 

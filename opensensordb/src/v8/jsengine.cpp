@@ -24,8 +24,6 @@
 
 using namespace v8;
 
-
-
 class ShellArrayBufferAllocator : public v8::ArrayBuffer::Allocator {
 public:
         virtual void* Allocate(size_t length) {
@@ -161,6 +159,17 @@ void Version(const v8::FunctionCallbackInfo<v8::Value>& args) {
         args.GetReturnValue().Set(
              v8::String::NewFromUtf8(args.GetIsolate(), v8::V8::GetVersion()));
 }
+
+
+void Exit(const v8::FunctionCallbackInfo<v8::Value>& args) {
+        //args.GetIsolate()->Dispose();
+        //V8::TerminateExecution();
+        //V8::TerminateExecution(args.GetIsolate());
+        args.GetIsolate()->ThrowException(String::NewFromUtf8(args.GetIsolate(), "Exit"));
+}
+
+
+
 
 
 // Reads a file into a v8 string.

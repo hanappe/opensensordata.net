@@ -2,6 +2,8 @@
 
 #include "db.h"
 
+#include <cmath>
+
 // Datapoint
 
 void Datapoint::print() const {
@@ -18,21 +20,23 @@ Datastream::Datastream() :
         ownerId(0),
         current(0x0)
 {
+        std::cout << "Datastream::Datastream()" << std::endl;
         memset(name, 0, sizeof(name));
         memset(description, 0, sizeof(description));
 }
 	
 Datastream::~Datastream() {
+        std::cout << "Datastream::~Datastream()" << std::endl;
+        
         clear();
-        clearContiguous();
+        //clearContiguous();
 }
-
 
 bool Datastream::load(int id) {
         clear();
+        clearContiguous();
         return DB::GetInstance()->loadDatastream(this, id);  
 }
-
 
 bool Datastream::loadContiguous(int id) {
         clearContiguous();
@@ -48,6 +52,7 @@ void Datastream::print() const {
 void Datastream::clear() {
 
         id = 0;
+
         ownerId = 0;
         current = 0x0;
  
@@ -56,7 +61,7 @@ void Datastream::clear() {
 
         for (std::vector<Datarow*>::iterator it = datarows.begin(); it != datarows.end(); ++it) {
                 delete (*it);
-        };
+        }
 
         datarows.clear();
 
@@ -125,15 +130,118 @@ Handle<Array> Datastream::toV8ArrayContiguous(Isolate * i) {
         return parent_array;
 }
 
+// Simple way
+
+void Datastream::appendDatapoints(char * strtime, time_t time, double value) {
+        Datapoint d;
+        strcpy(d.strtime, strtime);
+        d.time = time;
+        d.value = value;
+        
+        datapoints.push_back(d);
+}
+
+// Contiguous way
+
+void Datastream::beginDatarow() {
+        current = new Datarow;
+}
+
+void Datastream::append(char * strtime, time_t time, double value) {
+        if (!current) {
+                beginDatarow();
+        }
+        Datapoint d;
+        strcpy(d.strtime, strtime);
+        d.time = time;
+        d.value = value;
+        current->push_back(d);
+}
+
+void Datastream::endDatarow() {
+        if (current) {
+                datarows.push_back(current);
+                current = 0;
+        }
+}
+
+
+Handle<Array> Datastream::select(Isolate * iso, time_t start, time_t end) const {
+
+        Handle<Array> datapoints_array = Array::New(iso, 0);
+
+        size_t datapoints_count = 0;
+        for (std::vector<Datapoint>::const_iterator i = datapoints.begin(); i != datapoints.end(); ++i) {
+                const Datapoint& d = (*i);
+                
+                if (d.time >= start && d.time <= end) {
+                        
+                        Handle<Object> obj = v8::Object::New(iso);
+                        
+                        obj->Set(String::NewFromUtf8(iso, "date"), Date::New(iso, (double)d.time * 1000));
+                        obj->Set(String::NewFromUtf8(iso, "value"), Number::New(iso, d.value));
+                        
+                        datapoints_array->Set(datapoints_count, obj);
+                        ++datapoints_count;
+                }                
+        }
+
+        return datapoints_array;
+}
+
+Handle<Array> Datastream::select2(Isolate * iso, time_t start, time_t end) const {
+
+        //std::cout << "Datastream::select2: " << std::endl;
+        Handle<Array> datarows_array = Array::New(iso, 0);
+
+        //std::cout << "data row size: " << datarows.size() << std::endl;                
+        size_t datarows_count = 0;
+        for (std::vector<Datarow*>::const_iterator it = datarows.begin(); it != datarows.end(); ++it) {
+                const Datarow * dr = (*it);
+                size_t datapoints_count = 0;
+                Handle<Array> datapoints_array = Array::New(iso, 0);
+                bool has_value = false;
+
+                //std::cout << "current row size: " << dr->size() << std::endl;                
+                for (std::vector<Datapoint>::const_iterator it2 = dr->begin(); it2 != dr->end(); ++it2) {
+
+                        const Datapoint& dp = (*it2);
+                        
+                        if (dp.time >= start && dp.time <= end) {
+                                
+                                Handle<Object> obj = v8::Object::New(iso);
+                                
+                                obj->Set(String::NewFromUtf8(iso, "date"), Date::New(iso, (double)dp.time * 1000));
+                                obj->Set(String::NewFromUtf8(iso, "value"), Number::New(iso, dp.value));
+                                
+                                //std::cout << "datapoint : time & value: " << dp.time << " - " << dp.value << std::endl;
+                                datapoints_array->Set(datapoints_count, obj);
+                                ++datapoints_count;
+                                has_value = true;
+                        }
+                }
+                
+
+
+                if (has_value) {
+                        datarows_array->Set(datarows_count, datapoints_array);
+                        datarows_count++;
+                }
+        }
+
+        //std::cout << "Datastream::select2 datarow A result: " << datarows_count << std::endl;
+
+        return datarows_array;
+}
+
 // Datastream::JS
 
-Local<Object> Datastream::JS::GetNewInstance(Isolate * i) {
+Handle<ObjectTemplate> Datastream::JS::GetNewTemplate(Isolate * i) {
 
         Handle<ObjectTemplate> ds_template = ObjectTemplate::New();
         ds_template->SetInternalFieldCount(1);
         
         // First Way : create the datapoints one time and store it into javascript Datastream object.
-        Handle<Array> array = Array::New(i, 3);
         //ds_template->Set(String::NewFromUtf8(i, "datapoints"), array);
         //ds_template->Set(String::NewFromUtf8(i, "datapoints_contiguous"), array);
         
@@ -142,12 +250,24 @@ Local<Object> Datastream::JS::GetNewInstance(Isolate * i) {
         
         // set a javascript function WIP
         ds_template->Set(String::NewFromUtf8(i, "load"), FunctionTemplate::New(i, Load));
-        ds_template->Set(String::NewFromUtf8(i, "select"), FunctionTemplate::New(i, Select));
-        
+        ds_template->Set(String::NewFromUtf8(i, "select"), FunctionTemplate::New(i, SelectZ));
+        ds_template->Set(String::NewFromUtf8(i, "select2"), FunctionTemplate::New(i, Select2));
+        ds_template->Set(String::NewFromUtf8(i, "computationTime"), FunctionTemplate::New(i, ComputationTime));
+        ds_template->Set(String::NewFromUtf8(i, "totalTime"), FunctionTemplate::New(i, TotalTime));
+
+        return ds_template;
+}
+
+/*
+Local<Object> Datastream::JS::GetNewInstance(Isolate * i) {
+
+        //std::cout << "Datastream::JS::GetNewInstance" << std::endl;
+
+        Handle<ObjectTemplate> ds_template = GetNewTemplate(i);
         Local<Object> obj = ds_template->NewInstance();
         return obj;
 }
-
+*/
 void Datastream::JS::SetupObject(Local<Object> obj, const Datastream * d, Isolate* i) {
 
         if (!d) {
@@ -204,9 +324,12 @@ void Datastream::JS::Constructor(const FunctionCallbackInfo<Value>& info) {
                 Local<Object> obj = ds_template->NewInstance();
                 */
 
-                Local<Object> obj = GetNewInstance(i);
+                //Local<Object> obj = GetNewInstance(i);
+                Handle<ObjectTemplate> ds_template = GetNewTemplate(i);
+                Local<Object> obj = ds_template->NewInstance();
 
                 obj->SetInternalField(0, External::New(i, datastream));
+                AddToRef(datastream);
                 // Create and Return this newly created object
                 info.GetReturnValue().Set(obj);
                 
@@ -239,9 +362,9 @@ void Datastream::JS::Load(const FunctionCallbackInfo<Value>& info ) {
         //std::cout << "Datastream->load(datastream_id): " << datastream->load(datastream_id) << std::endl;
         //std::cout << "Datastream->loadContiguous(datastream_id): " << datastream->loadContiguous(datastream_id) << std::endl;
 
-        datastream->load(datastream_id);
-        datastream->loadContiguous(datastream_id);
-
+        bool b = datastream->load(datastream_id);
+        //datastream->loadContiguous(datastream_id);
+        
         //Fill this "Datastream" javascript object With properties
         SetupObject(info.This(), datastream, isolate);
         
@@ -255,7 +378,7 @@ void Datastream::JS::Load(const FunctionCallbackInfo<Value>& info ) {
         */
 }
 
-void Datastream::JS::Select(const FunctionCallbackInfo<Value>& info ) {
+void Datastream::JS::Select(const FunctionCallbackInfo<Value>& info)  {
 
         Isolate * isolate = info.GetIsolate();
         
@@ -269,8 +392,6 @@ void Datastream::JS::Select(const FunctionCallbackInfo<Value>& info ) {
         Handle<Value> arg2 = info[1];
         
         Handle<String> inv = String::NewFromUtf8(isolate, "Invalid Date");
-               
-        Handle<Array> datapoints_array = Array::New(isolate, 0);
 
         bool ok = !arg1.IsEmpty() && !arg2.IsEmpty();
         ok = ok && !arg1->IsUndefined() && !arg2->IsUndefined();
@@ -286,10 +407,13 @@ void Datastream::JS::Select(const FunctionCallbackInfo<Value>& info ) {
         }
 
         if (ok) {
+
                 const double start_t = arg1->NumberValue();
                 const long start_ut = (long)start_t / 1000;
                 const double end_t = arg2->NumberValue();
                 const long end_ut = (long)end_t / 1000;
+
+                Handle<Array> datapoints_array = Array::New(isolate, 0);
 
                 const std::vector<Datapoint>& datapoints =  datastream->datapoints;
                 
@@ -309,15 +433,13 @@ void Datastream::JS::Select(const FunctionCallbackInfo<Value>& info ) {
                         }
                         
                 }
+                info.GetReturnValue().Set(datapoints_array);
         }
-
-        info.GetReturnValue().Set(datapoints_array);        
 }
 
-void Datastream::JS::ComputationTime(Local<String> property,
-				   const PropertyCallbackInfo<Value> &info) {
 
-        //std::cout << "GetDatapointsAccessor" << std::endl;
+void Datastream::JS::SelectZ(const FunctionCallbackInfo<Value>& info)  {
+
         Isolate * isolate = info.GetIsolate();
         
         Local<Object> self = info.Holder();
@@ -325,34 +447,124 @@ void Datastream::JS::ComputationTime(Local<String> property,
         void* ptr = wrap->Value();
         
         Datastream * datastream = static_cast<Datastream*>(ptr);
-        Handle<Array> array = datastream->toV8Array(isolate);
+        
+        Handle<Value> arg1 = info[0];
+        Handle<Value> arg2 = info[1];
+        
+        Handle<String> inv = String::NewFromUtf8(isolate, "Invalid Date");
+               
+
+
+        bool ok = !arg1.IsEmpty() && !arg2.IsEmpty();
+        ok = ok && !arg1->IsUndefined() && !arg2->IsUndefined();
+        ok = ok && arg1->IsDate() && arg2->IsDate();
+
+        // Convert args to string value to check if date is valid        
+        {
+                const v8::String::Utf8Value invalid_date(inv);
+
+                v8::String::Utf8Value str_arg1(info[0]);
+                v8::String::Utf8Value str_arg2(info[1]);
+                ok = ok && strcmp(*str_arg1, *invalid_date) != 0 && strcmp(*str_arg2, *invalid_date) != 0;
+        }
+
+        if (ok) {
+                const double start_t = arg1->NumberValue();
+                const time_t start_ut = (time_t)start_t / 1000;
+                const double end_t = arg2->NumberValue();
+                const time_t end_ut = (time_t)end_t / 1000;
+
+                Handle<Array> datapoints_array = datastream->select(isolate, start_ut, end_ut);
+                info.GetReturnValue().Set(datapoints_array);
+        }
+
+
+}
+
+void Datastream::JS::Select2(const FunctionCallbackInfo<Value>& info)  {
+
+        Isolate * isolate = info.GetIsolate();
+        
+        Local<Object> self = info.Holder();
+        Local<External> wrap = Local<External>::Cast(self->GetInternalField(0));
+        void* ptr = wrap->Value();
+        
+        Datastream * datastream = static_cast<Datastream*>(ptr);
+        
+        Handle<Value> arg1 = info[0];
+        Handle<Value> arg2 = info[1];
+        
+        Handle<String> inv = String::NewFromUtf8(isolate, "Invalid Date");
+
+        bool ok = !arg1.IsEmpty() && !arg2.IsEmpty();
+        ok = ok && !arg1->IsUndefined() && !arg2->IsUndefined();
+        ok = ok && arg1->IsDate() && arg2->IsDate();
+
+        // Convert args to string value to check if date is valid        
+        {
+                const v8::String::Utf8Value invalid_date(inv);
+
+                v8::String::Utf8Value str_arg1(info[0]);
+                v8::String::Utf8Value str_arg2(info[1]);
+                ok = ok && strcmp(*str_arg1, *invalid_date) != 0 && strcmp(*str_arg2, *invalid_date) != 0;
+        }
+
+        if (ok) {
+                const double start_t = arg1->NumberValue();
+                const time_t start_ut = (time_t)start_t / 1000;
+                const double end_t = arg2->NumberValue();
+                const time_t end_ut = (time_t)end_t / 1000;
+
+                Handle<Array> datapoints_array = datastream->select2(isolate, start_ut, end_ut);
+                info.GetReturnValue().Set(datapoints_array);
+        }
+
+
+}
+
+
+
+
+struct DHMS {
+        time_t days;
+        time_t hours;
+        time_t minutes;
+        time_t seconds;
+};
+
+// Time in second (t) to Day Hour Minute Second (DHMS)
+
+void secondToDHMS(time_t t, DHMS& dhms) {
+
+        dhms.days = dhms.hours = dhms.minutes = dhms.seconds = 0;
+
+        time_t temp = t;
+        dhms.days = temp / (24 * 3600);
+        temp = temp - (dhms.days * 24 * 3600);
+        dhms.hours = temp / 3600;
+        temp = temp - (dhms.hours * 3600);
+        dhms.minutes = temp / 60;
+        dhms.seconds = temp - (dhms.minutes * 60);
+
+        //std::cout << "days: " << days << " hours: " << hours << " minutes: " << minutes << " seconds: " << seconds << std::endl;
+}
+
+void Datastream::JS::ComputationTime(const FunctionCallbackInfo<Value>& info) {
+
+        //std::cout << "Datastream::JS::ComputationTime" << std::endl;
+
+        Isolate * isolate = info.GetIsolate();
+        
+        Local<Object> self = info.Holder();
+        Local<External> wrap = Local<External>::Cast(self->GetInternalField(0));
+        void* ptr = wrap->Value();
+        
+        Datastream * datastream = static_cast<Datastream*>(ptr);
 
         time_t total_time = 0;
 
-	//const std::vector<Datarow*>& datarows = datastream->datarows;
-	std::vector<Datarow*> datarows = std::vector<Datarow*>();
-        
-        Datarow * a = new Datarow;
-        Datarow * b = new Datarow;
-        Datapoint da,db, dc,dd,de,df;
+	std::vector<Datarow*>& datarows = datastream->datarows;
 
-        da.time = 0;
-        db.time = 10;
-
-        dc.time = 30;
-        dd.time = 40;
-        de.time = 50;
-        df.time = 60;
-
-        a->push_back(da);
-        a->push_back(db);
-
-        b->push_back(dc);
-        b->push_back(dd);
-        b->push_back(de);
-        b->push_back(df);
-        
-        /*
         for (std::vector<Datarow*>::iterator i = datarows.begin(); i != datarows.end(); ++i) {
                 Datarow* row = (*i);
                 
@@ -363,36 +575,104 @@ void Datastream::JS::ComputationTime(Local<String> property,
                 
                 size_t counter = 0 ;
                 Datapoint& last = drow[counter];
-                counter++;
-                Datapoint& current = drow[counter];
-                do {
+
+                while (counter < drow.size() ) {
+
+                        Datapoint& current = drow[counter];
+
                         time_t delta = current.time - last.time;
-                        
-                        std::cout << "delta: " << delta << std::endl;
+
                         total_time += delta;
 
                         last = current;
-                        counter++;
-                        current = drow[counter];
-                } while ();
-                std::cout << "total_time: " << total_time << std::endl;
-
+                        ++counter;
+                }
         }
 
-        */
+        //std::cout << "cpp total_time: " << total_time << std::endl;
 
-        info.GetReturnValue().Set(Number::New(isolate, total_time));
+        DHMS t; // elapsed_time with "days", "hours", "minutes", "seconds"
+        secondToDHMS(total_time, t);
+
+        Handle<Object> time_obj = Object::New(isolate);
+        time_obj->Set(String::NewFromUtf8(isolate, "days"), Number::New(isolate, t.days));
+        time_obj->Set(String::NewFromUtf8(isolate, "hours"), Number::New(isolate, t.hours));
+        time_obj->Set(String::NewFromUtf8(isolate, "minutes"), Number::New(isolate, t.minutes));
+        time_obj->Set(String::NewFromUtf8(isolate, "seconds"), Number::New(isolate, t.seconds));
+        
+        //std::cout << "days: " << t.days << " hours: " << t.hours << " minutes: " << t.minutes << " seconds: " << t.seconds << std::endl;
+        //info.GetReturnValue().Set(Number::New(isolate, total_time));
+        //info.GetReturnValue().Set(Date::New(isolate, (double)total_time * 1000));
+        info.GetReturnValue().Set(time_obj);
 }   
 
+void Datastream::JS::TotalTime(const FunctionCallbackInfo<Value>& info) {
 
+        Isolate * isolate = info.GetIsolate();
+        
+        Local<Object> self = info.Holder();
+        Local<External> wrap = Local<External>::Cast(self->GetInternalField(0));
+        void* ptr = wrap->Value();
+        
+        Datastream * datastream = static_cast<Datastream*>(ptr);
+
+        //Handle<Array> array = datastream->toV8Array(isolate);
+
+        time_t total_time = 0;
+
+        time_t begin_time = 0;
+        time_t last_time = 0;
+        bool first = true;
+
+
+	std::vector<Datarow*>& datarows = datastream->datarows;
+        for (std::vector<Datarow*>::iterator i = datarows.begin(); i != datarows.end(); ++i) {
+                Datarow* row = (*i);
+                
+                Datarow& drow = *row;
+                if (row->empty() || row->size() < 2) {
+                        continue;
+                }
+                
+                size_t counter = 0 ;
+                Datapoint& last = drow[counter];
+                //counter++;
+
+                while (counter < drow.size() ) {
+
+                        Datapoint& current = drow[counter];
+                        
+                        if (first) {
+                                begin_time = current.time; 
+                                first = false;
+                        }
+
+                        last = current;
+
+                        ++counter;
+                        last_time = last.time;
+                }
+        }
+
+        //std::cout << "cpp total_time: " << total_time << std::endl;
+
+        DHMS t; // elapsed_time with "days", "hours", "minutes", "seconds"
+        secondToDHMS(last_time - begin_time, t);
+
+        Handle<Object> time_obj = Object::New(isolate);
+        time_obj->Set(String::NewFromUtf8(isolate, "days"), Number::New(isolate, t.days));
+        time_obj->Set(String::NewFromUtf8(isolate, "hours"), Number::New(isolate, t.hours));
+        time_obj->Set(String::NewFromUtf8(isolate, "minutes"), Number::New(isolate, t.minutes));
+        time_obj->Set(String::NewFromUtf8(isolate, "seconds"), Number::New(isolate, t.seconds));
+        
+        info.GetReturnValue().Set(time_obj);
+}
 
 void Datastream::JS::GetX(Local<String> property,                                               
                           const PropertyCallbackInfo<Value> &info) {
 
         //Local<Object> self = info.Holder();
-
-        //Local<External> wrap = Local<External>::Cast(self->GetInternalField(0));
-        
+        //Local<External> wrap = Local<External>::Cast(self->GetInternalField(0));        
         //void* ptr = wrap->Value();
         
         int value = 5;
@@ -415,3 +695,17 @@ void Datastream::JS::GetDatapoints(Local<String> property,
         info.GetReturnValue().Set(array);
 }   
 
+std::vector<Datastream*> Datastream::JS::references;
+
+void Datastream::JS::AddToRef(Datastream * datastream) {
+        references.push_back(datastream);
+}
+
+void Datastream::JS::DeleteAllRef() {
+        
+        for (std::vector<Datastream*>::iterator it = references.begin(); it != references.end(); ++it) {
+                delete (*it);
+        }
+
+        references.clear();        
+}

@@ -5,6 +5,7 @@
 
 #include <mysql/mysql.h>
 
+class Account;
 class Group;
 class Datastream;
 class Photostream;
@@ -20,6 +21,8 @@ class DB {
 
   static DB * GetInstance();
 
+  bool loadAccount(Account * account, int id);
+  //bool loadAccount(Account * account, char * ch);
   bool loadGroup(Group * group, int id);
 
   bool loadDatastream(Datastream * datastream, int id);

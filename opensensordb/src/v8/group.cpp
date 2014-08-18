@@ -4,8 +4,15 @@
 #include "datastream.h"
 #include "photostream.h"
 
+Group::Group(int i) : id(i) {
+}
+
+Group::~Group() {
+        //clear();
+}
 
 bool Group::load(int id) {
+        clear();
         return DB::GetInstance()->loadGroup(this, id);
 }
 
@@ -17,17 +24,47 @@ void Group::print() {
 }
 
 void Group::clear() {
-
-        for (std::vector<Datastream*>::iterator it = datastreams.begin(); it != datastreams.end(); ++it) {
-                delete (*it);
-        }
+        //for (std::vector<Datastream*>::iterator it = datastreams.begin(); it != datastreams.end(); ++it) {
+        //        delete (*it);
+        //}
         
-        for (std::vector<Photostream*>::iterator it = photostreams.begin(); it != photostreams.end(); ++it) {
-                delete (*it);
-        }
+        //for (std::vector<Photostream*>::iterator it = photostreams.begin(); it != photostreams.end(); ++it) {
+        //        delete (*it);
+        //}
 
 }
 
+Handle<Array> Group::select(Isolate * iso, time_t start, time_t end) const {
+
+        //std::cout << "Datastream::select2: " << std::endl;
+        Handle<Array> main_array = Array::New(iso, 0);
+
+        //std::cout << "data row size: " << datarows.size() << std::endl;                
+        size_t datastream_count = 0;
+        for (std::vector<Datastream*>::const_iterator it = datastreams.begin(); it != datastreams.end(); ++it) {
+                const Datastream * ds = (*it);
+                Handle<Array> datastream_array = ds->select(iso, start, end);
+                main_array->Set(datastream_count, datastream_array);
+        }
+
+        //std::cout << "Datastream::select2 datarow A result: " << datarows_count << std::endl;
+
+        return main_array;
+}
+
+
+Handle<ObjectTemplate> Group::JS::GetNewTemplate(Isolate * i) {
+        Handle<ObjectTemplate> group_template = ObjectTemplate::New();
+        group_template->SetInternalFieldCount(1);
+        
+        // set a javascript function
+        group_template->Set(String::NewFromUtf8(i, "load"), FunctionTemplate::New(i, Load));
+        group_template->Set(String::NewFromUtf8(i, "select"), FunctionTemplate::New(i, Select));
+        
+        return group_template;
+}
+
+/*
 Local<Object> Group::JS::GetNewInstance(Isolate * i) {
 
         Handle<ObjectTemplate> group_template = ObjectTemplate::New();
@@ -35,9 +72,11 @@ Local<Object> Group::JS::GetNewInstance(Isolate * i) {
                         
         // set a javascript function
         group_template->Set(String::NewFromUtf8(i, "load"), FunctionTemplate::New(i, Load));
+        group_template->Set(String::NewFromUtf8(i, "select"), FunctionTemplate::New(i, Select));
         
         return group_template->NewInstance();
 }
+*/
 
 void Group::JS::SetupObject(Local<Object> obj, Group * g, Isolate* i) {
 
@@ -56,9 +95,6 @@ void Group::JS::SetupObject(Local<Object> obj, Group * g, Isolate* i) {
         // Alias
         std::vector<Datastream*>& datastreams = g->datastreams;
         
-        std::cout << "Group::JS::SetupObject-datastream: " << datastreams.size() << std::endl;
-        
-        //return;
         Handle<Array> datastreams_array = Array::New(i, datastreams.size());
         
         int datastream_count = 0;
@@ -69,18 +105,15 @@ void Group::JS::SetupObject(Local<Object> obj, Group * g, Isolate* i) {
                 //Handle<Object> obj = Object::New(i);
                 
                 
-                Local<Object> ds_obj = Datastream::JS::GetNewInstance(i);
+                //Local<Object> ds_obj = Datastream::JS::GetNewInstance(i);
+
+                Handle<ObjectTemplate> ds_template = Datastream::JS::GetNewTemplate(i);
+                Local<Object> ds_obj = ds_template->NewInstance();
+
                 ds_obj->SetInternalField(0, External::New(i, datastream));
           
                 Datastream::JS::SetupObject(ds_obj, datastream, i); 
                 
-                /*obj->PrototypeTemplate().Set(
-                                            String::NewFromUtf8(i, "select"),
-                                            Datastream::JS::Select
-                                            //FunctionTemplate::New()->GetFunction()
-                                            //FunctionTemplate::New(MyWheelsMethodCallback)->GetFunction();
-                                            );
-                */
                 //ds_template->Set(String::NewFromUtf8(i, "select"), FunctionTemplate::New(i, Select));
                 datastreams_array->Set(datastream_count, ds_obj);
         }
@@ -102,12 +135,14 @@ void Group::JS::SetupObject(Local<Object> obj, Group * g, Isolate* i) {
         for (std::vector<Photostream*>::iterator it = photostreams.begin(); it != photostreams.end(); ++it, photostream_count++) {
                 Photostream * photostream = (*it);
 
-                Local<Object> ps_obj = Photostream::JS::GetNewInstance(i);
+                Handle<ObjectTemplate> ps_template = Photostream::JS::GetNewTemplate(i);
+                Local<Object> ps_obj = ps_template->NewInstance();
+
                 ps_obj->SetInternalField(0, External::New(i, photostream));
           
-                Photostream::JS::SetupObject(obj, photostream, i); 
+                Photostream::JS::SetupObject(ps_obj, photostream, i); 
                 
-                datastreams_array->Set(photostream_count, obj);
+                photostreams_array->Set(photostream_count, ps_obj);
         }
 
         obj->Set(String::NewFromUtf8(i, "photostreams"), photostreams_array);
@@ -129,7 +164,8 @@ void Group::JS::Constructor(const FunctionCallbackInfo<Value>& info) {
         
         if (group) {
 
-                Local<Object> obj = GetNewInstance(i);
+                Handle<ObjectTemplate> g_template= GetNewTemplate(i);
+                Local<Object> obj = g_template->NewInstance();
                 obj->SetInternalField(0, External::New(i, group));
                 // Create and Return this newly created object
                 info.GetReturnValue().Set(obj);
@@ -215,3 +251,84 @@ void Group::JS::Load(const FunctionCallbackInfo<Value>& info ) {
         info.This()->Set(String::NewFromUtf8(i, "datastreams"), datastreams_array);
 }
 
+
+
+void Group::JS::Select(const FunctionCallbackInfo<Value>& info)  {
+
+        Isolate * isolate = info.GetIsolate();
+        
+        Local<Object> self = info.Holder();
+        Local<External> wrap = Local<External>::Cast(self->GetInternalField(0));
+        void* ptr = wrap->Value();
+        
+        Group * group = static_cast<Group*>(ptr);
+        
+        Handle<Value> arg1 = info[0];
+        Handle<Value> arg2 = info[1];
+        
+        Handle<String> inv = String::NewFromUtf8(isolate, "Invalid Date");
+               
+
+        if (!group || group->datastreams.size() == 0) {
+                return;
+        }
+
+        bool ok = !arg1.IsEmpty() && !arg2.IsEmpty();
+        ok = ok && !arg1->IsUndefined() && !arg2->IsUndefined();
+        ok = ok && arg1->IsDate() && arg2->IsDate();
+
+        // Convert args to string value to check if date is valid        
+        {
+                const v8::String::Utf8Value invalid_date(inv);
+
+                v8::String::Utf8Value str_arg1(info[0]);
+                v8::String::Utf8Value str_arg2(info[1]);
+                ok = ok && strcmp(*str_arg1, *invalid_date) != 0 && strcmp(*str_arg2, *invalid_date) != 0;
+        }
+
+        if (ok) {
+                
+                Handle<Array> datastreams_array = Array::New(isolate, group->datastreams.size());
+
+                const double start_t = arg1->NumberValue();
+                const long start_ut = (long)start_t / 1000;
+                const double end_t = arg2->NumberValue();
+                const long end_ut = (long)end_t / 1000;
+
+                std::vector<Datastream*>& datastreams = group->datastreams;
+
+                int datastream_count = 0;
+                for (std::vector<Datastream*>::const_iterator i = datastreams.begin(); i != datastreams.end(); ++i, ++ datastream_count) {
+                        Datastream * d = (*i);
+                        Handle<Object> obj = Object::New(isolate);
+
+                        std::cout << "Test: " << d->id << std::endl;
+
+                        obj->Set(String::NewFromUtf8(isolate, "id"), Number::New(isolate, d->id));
+                        obj->Set(String::NewFromUtf8(isolate, "name"), String::NewFromUtf8(isolate, d->name));
+
+                        Handle<Array> selection = d->select(isolate, start_ut, end_ut);
+                        obj->Set(String::NewFromUtf8(isolate, "datapoints"), selection);
+
+                        datastreams_array->Set(datastream_count, obj);
+                }
+
+                info.GetReturnValue().Set(datastreams_array);
+        }
+}
+
+
+std::vector<Group*> Group::JS::references;
+
+void Group::JS::AddToRef(Group * group) {
+        references.push_back(group);
+}
+
+void Group::JS::DeleteAllRef() {
+        
+        for (std::vector<Group*>::iterator it = references.begin(); it != references.end(); ++it) {
+                delete (*it);
+        }
+
+        references.clear();        
+}

@@ -65,7 +65,7 @@ public:
         struct JS {
 
                 // Create a mew instance of javascript object "Photostream"
-                static Local<Object> GetNewInstance(Isolate * i);
+                static Handle<ObjectTemplate> GetNewTemplate(Isolate * i);
 
                 // Register function wich create javascript object "Photostream" in global scope
                 static void Register(Handle<ObjectTemplate> global, Isolate* i);                
@@ -77,10 +77,16 @@ public:
 
                 // Fill 'obj' with photostream properties
                 static void SetupObject(Local<Object> obj, const Photostream * p, Isolate* i);
-                
-        }; // end struc JS
 
-}; // end class Photostrean
+                // Reference to all cpp object (needed to delete them)
+                static std::vector<Photostream*> references;
+
+                static void AddToRef(Photostream * photostream);
+                static void DeleteAllRef();
+                
+        }; // end struct JS
+
+}; // end class Photostream
 
 #endif // PHOTOSTREAMV8_H
 

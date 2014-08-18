@@ -1,6 +1,6 @@
 SHELL = /bin/bash
 
-jsengine_sources = v8/db.cpp v8/group.cpp v8/datastream.cpp v8/photostream.cpp v8/point.cpp v8/jsengine.cpp
+jsengine_sources = v8/db.cpp v8/account.cpp v8/group.cpp v8/datastream.cpp v8/photostream.cpp v8/point.cpp v8/jsengine.cpp v8/reply.cpp
 jsengine_objects = ${jsengine_sources:.cpp=.o}
 jsengine_libs = libosdb.a -lm
 
