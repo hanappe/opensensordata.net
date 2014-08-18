@@ -83,16 +83,46 @@ namespace {
                 return c == '\"';
         }
 
+        // Trim the first and the last quote
+
         const char* trim_quote(char *str) {
+
+                // Trim leading quote
+                if (isquote(*str)) {
+                        ++str;
+                }
+
+                if (*str == 0) { // Empty ?
+                        return str;
+                }
+
+                // Trim trailing quote
+                
+                char* end = str + std::strlen(str) - 1;
+                
+                if (end > str && isquote(*end)) {
+                        --end;
+                }
+
+                // Write new null terminator
+                *(end + 1) = '\0';
+
+                return str;
+        }
+
+        // Trim all quote before the first non quote character
+        // and trim all quote after the last non quote character
+
+        const char* trim_quotes(char *str) {
                 char *end;
 
-                // Trim leading space
+                // Trim leading quotes
                 while(isquote(*str)) str++;
 
                 if(*str == 0)  // Empty ?
                         return str;
 
-                // Trim trailing quote
+                // Trim trailing quotes
                 end = str + std::strlen(str) - 1;
                 while(end > str && isquote(*end)) end--;
 
@@ -102,6 +132,36 @@ namespace {
                 return str;
         }
 
+        // Replace double character from '\' + 'n' to '\n' 
+
+        std::string unescape(const std::string& s) {
+                std::string res;
+                std::string::const_iterator it = s.begin();
+         
+                while (it != s.end()) {
+                        char c = *it++;
+                        if (c == '\\' && it != s.end()) {
+                                switch (*it++) {
+                                case 'a': c = '\a'; break;
+                                case 'b': c = '\b'; break;
+                                case 'f': c = '\\f'; break;
+                                case 'n': c = '\n'; break;
+                                case 'r': c = '\r'; break;
+                                case 't': c = '\t'; break;
+                                case 'v': c = '\v'; break;
+                                case '\\': c = '\\'; break;
+                                case '\'': c = '\''; break;
+                                case '\"': c = '\"'; break;
+                                case '\?': c = '\?'; break;
+                                default: 
+                                        continue;
+                                }
+                        }
+                        res += c;
+                }
+                
+                return res;
+        }
 
         void to_json(Isolate * i, Handle<Value> value, std::string& result, bool unquote = false) {
                 //Isolate * i = Isolate::GetCurrent();
@@ -135,32 +195,35 @@ namespace {
 
 void Reply::JS::Write(const FunctionCallbackInfo<Value>& info) {
 
-        Isolate * isolate = info.GetIsolate();
-        
+        Isolate * isolate = info.GetIsolate();        
         const Handle<Value>& arg1 = info[0];
         
-
         if (!arg1.IsEmpty()) {
                 std::string result;
-                to_json(isolate, arg1, result);
-                AppendLine(result);
+                if (arg1->IsString()) {
+                        to_json(isolate, arg1, result, true);
+                        result = unescape(result);
+                } else {
+                        to_json(isolate, arg1, result);
+                }
+
+                Append(result);
         }
 }
 
 void Reply::JS::WriteLine(const FunctionCallbackInfo<Value>& info) {
 
         Isolate * isolate = info.GetIsolate();
-        
-        Local<Object> self = info.Holder();
-        Local<External> wrap = Local<External>::Cast(self->GetInternalField(0));
-        void* ptr = wrap->Value();
-        
         const Handle<Value>& arg1 = info[0];
-        
 
         if (!arg1.IsEmpty()) {
                 std::string result;
-                to_json(isolate, arg1, result);
+                if (arg1->IsString()) {
+                        to_json(isolate, arg1, result, true);
+                        result = unescape(result);
+                } else {
+                        to_json(isolate, arg1, result);
+                }
                 AppendLine(result);
         }
 }
@@ -171,8 +234,7 @@ void Reply::JS::Print(const FunctionCallbackInfo<Value>& info) {
 
 void Reply::JS::SetMimeType(const FunctionCallbackInfo<Value>& info) {
 
-        Isolate * isolate = info.GetIsolate();
-                
+        Isolate * isolate = info.GetIsolate();                
         const Handle<Value>& arg1 = info[0];
         
         if (!arg1.IsEmpty() && arg1->IsString()) {

@@ -87,14 +87,6 @@ using namespace v8;
                 Account::JS::DeleteAllRef();
         }
 
-class ShellArrayBufferAllocator : public v8::ArrayBuffer::Allocator {
-        public:
-        virtual void* Allocate(size_t length) {
-                return memset(AllocateUninitialized(length), 0, length);
-        }
-        virtual void* AllocateUninitialized(size_t length) { return malloc(length); }
-        virtual void Free(void* data, size_t) { free(data); }
-        };
 
 enum ScriptError {
         UNIMPL,
@@ -136,13 +128,7 @@ char * GetError(ScriptError e) {
 //}
 
 
-static void EmptyFunction(const v8::FunctionCallbackInfo<v8::Value>& args) { }
-
-bool initialized = false;
-
 char* server_execute_script(const char* code, list_t* args, char** content_type) {
-
-        std::cout << "server_execute_script(...)" << std::endl;
         
         char * replycontent = NULL;
         *content_type = NULL;
@@ -153,6 +139,7 @@ char* server_execute_script(const char* code, list_t* args, char** content_type)
         }
 
         v8::Isolate* isolate = v8::Isolate::New();
+
         {
                 v8::Isolate::Scope iscope(isolate);
                 //v8::V8::Initialize();
@@ -171,10 +158,6 @@ char* server_execute_script(const char* code, list_t* args, char** content_type)
 
                         v8::Context::Scope context_scope(context);
                         v8::TryCatch try_catch;
-                        //v8::Local<v8::FunctionTemplate> myc =
-                        //      v8::FunctionTemplate::New(EmptyFunction);
-                        //USE(myc);
-                        //CompileRun("");
                         
                         Handle<String> source = String::NewFromUtf8(isolate, code);
                         Handle<Script> script = Script::Compile(source);
@@ -220,10 +203,9 @@ char* server_execute_script(const char* code, list_t* args, char** content_type)
                         replycontent =  GetError(ScriptError::CONTEXT);
                 }
 
-
                 //context->Dispose();
                 
-                Reply::Print();
+                //Reply::Print();
                 Reply::Clear();
 
                 // Delete all "C++ wrapped objects"
@@ -247,8 +229,6 @@ char* server_execute_script(const char* code, list_t* args, char** content_type)
         isolate->Dispose();
 
         return replycontent;
-
-        //return GetError(ScriptError::UNIMPL);
 }
 
 void server_free_result(char* buffer)

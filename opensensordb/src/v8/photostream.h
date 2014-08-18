@@ -51,8 +51,7 @@ public:
 	std::vector<PhotoInfo> photoinfos;
 
 public:
-        Photostream();
-	
+        Photostream();	
 	~Photostream();
 
         bool load(int id);

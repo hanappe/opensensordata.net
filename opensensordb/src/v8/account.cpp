@@ -66,19 +66,6 @@ Handle<ObjectTemplate> Account::JS::GetNewTemplate(Isolate * i) {
         return account_template;
 }
 
-/*
-Local<Object> Account::JS::GetNewInstance(Isolate * i) {
-
-        Handle<ObjectTemplate> account_template = ObjectTemplate::New();
-        account_template->SetInternalFieldCount(1);
-                        
-        // set a javascript function
-        account_template->Set(String::NewFromUtf8(i, "load"), FunctionTemplate::New(i, Load));
-        
-        return account_template->NewInstance();
-}
-*/
-
 void Account::JS::SetupObject(Local<Object> obj, Account * a, Isolate* i) {
 
         if (!a) {
@@ -120,7 +107,7 @@ void Account::JS::Register(Handle<ObjectTemplate> global, Isolate* i) {
 
 
 void Account::JS::Constructor(const FunctionCallbackInfo<Value>& info) {
-        v8::Isolate* i = v8::Isolate::GetCurrent();
+        Isolate* i = Isolate::GetCurrent();
                 
         Account * acc = new Account();
         if (acc) {

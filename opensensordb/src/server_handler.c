@@ -1,3 +1,4 @@
+
 #include <stdlib.h>
 
 #include "server.h"
@@ -125,34 +126,33 @@ void server_handle_script(request_t* request, response_t* response)
 
         log_info("Executing script: %s", script);
 
-        std::cout << ("Execute script:") << std::endl;
         char* content_type = 0;
         char* result = server_execute_script(code, request->args, &content_type);
-        std::cout << ("Release script:") << std::endl;
+
         filemanager_release_script(code);
 
 
         int len = result ? strlen(result) : 0;
 
-        response->status = 200;
+        // Fill response
 
-        if (content_type) {
-                std::cout << ("Set content Type A:") << std::endl;
-                response_content_type(response, content_type);
-                // Quick and dirty
-                free(content_type);
-        } else {
-                std::cout << ("Set content Type B:") << std::endl;
-                response_content_type(response, "application/json");
+        {
+                response->status = 200;
+
+                // Kev: handle content type, quick and dirty...
+                
+                if (content_type) {
+                        response_content_type(response, content_type);
+                        free(content_type);
+                } else {
+                        response_content_type(response, "application/json");
+                }
+                
+                response->body = result;
+                response->length = len;
+                response->mybuf = 1;
+                response->freebuf = server_free_result;
         }
-
-        //std::cout << "Result![") << bool(result) << "]" << std::endl;
-        std::cout << "Setup the rest:" << std::endl;
-        response->body = result;
-        response->length = len;
-        response->mybuf = 1;
-        response->freebuf = server_free_result;
-        std::cout << "end server_handle_script" << std::endl;
 }
 
 void server_handle_request(request_t* request, response_t* response)

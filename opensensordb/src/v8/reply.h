@@ -39,6 +39,8 @@ public:
                 static void Write(const FunctionCallbackInfo<Value>& info);
                 static void WriteLine(const FunctionCallbackInfo<Value>& info);
                 static void Print(const FunctionCallbackInfo<Value>& info);
+                static void Parse(const FunctionCallbackInfo<Value>& info);
+
                 static void SetMimeType(const FunctionCallbackInfo<Value>& info);
         
         }; // end struct JS

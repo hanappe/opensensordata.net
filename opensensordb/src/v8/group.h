@@ -45,7 +45,6 @@ public:
         struct JS {
 
                 // Create a mew instance of javascript object "Datastream"
-                //static Local<Object> GetNewInstance(Isolate * i);
                 static Handle<ObjectTemplate> GetNewTemplate(Isolate * i);
 
                 // Register function wich create javascript object "Datastream" in global scope

@@ -64,20 +64,6 @@ Handle<ObjectTemplate> Group::JS::GetNewTemplate(Isolate * i) {
         return group_template;
 }
 
-/*
-Local<Object> Group::JS::GetNewInstance(Isolate * i) {
-
-        Handle<ObjectTemplate> group_template = ObjectTemplate::New();
-        group_template->SetInternalFieldCount(1);
-                        
-        // set a javascript function
-        group_template->Set(String::NewFromUtf8(i, "load"), FunctionTemplate::New(i, Load));
-        group_template->Set(String::NewFromUtf8(i, "select"), FunctionTemplate::New(i, Select));
-        
-        return group_template->NewInstance();
-}
-*/
-
 void Group::JS::SetupObject(Local<Object> obj, Group * g, Isolate* i) {
 
         if (!g) {
@@ -220,25 +206,7 @@ void Group::JS::Load(const FunctionCallbackInfo<Value>& info ) {
                 //obj->Set(v8::String::NewFromUtf8(i, "test2"), Number::New(i, 0));
                 
                 //datapoints_array->Set(datapoints_count, obj);
-                        
-                /*
-                const std::vector<Datapoint>& datapoints_ = datastream->datapoints;
-                int datapoint_count = 0;
-                for (std::vector<Datapoint>::const_iterator itb = datapoints_.begin(); itb != datapoints_.end(); ++itb, datapoint_count++) {
-                        
-                        const Datapoint& d = (*itb);    
-                        if (datastream_count < 2) {
-                                //d.print();
-                        }
-                        
-                        //Handle<Object> obj = Object::New(i);
-                        //obj->Set(v8::String::NewFromUtf8(i, "date"), Date::New(i, (double)d.time * 1000));
-                        //obj->Set(v8::String::NewFromUtf8(i, "value"), Number::New(i, d.value));
-                        //datapoints_array->Set(datapoints_count, obj);
-                        
-                }
-                */
-                
+                                        
                 datastreams_array->Set(datastream_count, obj);
          
                 //}
