@@ -169,7 +169,7 @@ $timestamp_now = NULL;
 function get_timestamp($s, $linenum)
 {
         global $timestamp_now;
- 
+
         // NOW, now, -
         if (($s == 'NOW') || ($s == 'now') || ($s == '-')) {
                 if (!$timestamp_now) {

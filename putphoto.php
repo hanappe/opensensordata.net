@@ -113,7 +113,7 @@ $stats->update();
 
 // Copy the image
 
-$filename = Photostream::to_path($photodir, $selector, "orig");
+$filename = Photostream::selector_to_path($photodir, $selector, "orig");
 
 $dir = dirname($filename);
 if (!is_dir($dir) && !mkdir($dir, 0775, true)) {
@@ -141,17 +141,17 @@ $img = new Imagick($filename);
 $img->scaleImage(640, 0); 
 $d = $img->getImageGeometry();
 if ($d['height'] > 640)  $img->scaleImage(0, 640); 
-$filename = Photostream::to_path($photodir, $selector, "medium");
+$filename = Photostream::selector_to_path($photodir, $selector, "medium");
 $img->writeImage($filename);
 
 
 $img->resizeImage(240, 180, Imagick::FILTER_LANCZOS, 1);
-$filename = Photostream::to_path($photodir, $selector, "small");
+$filename = Photostream::selector_to_path($photodir, $selector, "small");
 $img->writeImage($filename);
 
 
 $img->resizeImage(100, 75, Imagick::FILTER_LANCZOS, 1);
-$filename = Photostream::to_path($photodir, $selector, "thumb");
+$filename = Photostream::selector_to_path($photodir, $selector, "thumb");
 $img->writeImage($filename);
 
 $img->destroy();
