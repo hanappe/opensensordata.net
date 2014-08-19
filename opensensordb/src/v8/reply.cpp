@@ -1,3 +1,4 @@
+
 #include "reply.h"
 
 #include <iostream>
@@ -47,34 +48,13 @@ const std::string& Reply::GetMimeType() {
 Handle<ObjectTemplate> Reply::JS::GetNewTemplate(Isolate * i) {
 
         Handle<ObjectTemplate> reply_template = ObjectTemplate::New(i);
-        //reply_template->SetInternalFieldCount(1);
                         
-        // set a javascript function
         reply_template->Set(String::NewFromUtf8(i, "write"), FunctionTemplate::New(i, Write));
         reply_template->Set(String::NewFromUtf8(i, "writeln"), FunctionTemplate::New(i, WriteLine));
         reply_template->Set(String::NewFromUtf8(i, "print"), FunctionTemplate::New(i, Print));
         reply_template->Set(String::NewFromUtf8(i, "setMimeType"), FunctionTemplate::New(i, SetMimeType));
 
         return reply_template;
-}
-
-
-void Reply::JS::Register(Handle<ObjectTemplate> global, Isolate* i) {
-        global->Set(String::NewFromUtf8(i, "Reply"), FunctionTemplate::New(i, Constructor));
-}
-
-
-void Reply::JS::Constructor(const FunctionCallbackInfo<Value>& info) {
-        v8::Isolate* i = v8::Isolate::GetCurrent();
-                
-        //Reply * acc = new Reply();
-        //if (acc) {
-        //Local<Object> obj = GetNewInstance(i);
-                
-                //obj->SetInternalField(0, External::New(i, acc));
-                // Create and Return this newly created object
-        //      info.GetReturnValue().Set(obj);
-                //}
 }
 
 namespace {
@@ -144,7 +124,7 @@ namespace {
                                 switch (*it++) {
                                 case 'a': c = '\a'; break;
                                 case 'b': c = '\b'; break;
-                                case 'f': c = '\\f'; break;
+                                case 'f': c = '\f'; break;
                                 case 'n': c = '\n'; break;
                                 case 'r': c = '\r'; break;
                                 case 't': c = '\t'; break;
@@ -195,16 +175,18 @@ namespace {
 
 void Reply::JS::Write(const FunctionCallbackInfo<Value>& info) {
 
-        Isolate * isolate = info.GetIsolate();        
-        const Handle<Value>& arg1 = info[0];
+        Isolate * isolate = info.GetIsolate();
         
-        if (!arg1.IsEmpty()) {
+        for (int i = 0; i < info.Length(); i++) {
+                
+                const Handle<Value>& arg = info[i];
+
                 std::string result;
-                if (arg1->IsString()) {
-                        to_json(isolate, arg1, result, true);
+                if (arg->IsString()) {
+                        to_json(isolate, arg, result, true);
                         result = unescape(result);
                 } else {
-                        to_json(isolate, arg1, result);
+                        to_json(isolate, arg, result);
                 }
 
                 Append(result);
@@ -214,16 +196,19 @@ void Reply::JS::Write(const FunctionCallbackInfo<Value>& info) {
 void Reply::JS::WriteLine(const FunctionCallbackInfo<Value>& info) {
 
         Isolate * isolate = info.GetIsolate();
-        const Handle<Value>& arg1 = info[0];
 
-        if (!arg1.IsEmpty()) {
+        for (int i = 0; i < info.Length(); i++) {
+                
+                const Handle<Value>& arg = info[i];
+
                 std::string result;
-                if (arg1->IsString()) {
-                        to_json(isolate, arg1, result, true);
+                if (arg->IsString()) {
+                        to_json(isolate, arg, result, true);
                         result = unescape(result);
                 } else {
-                        to_json(isolate, arg1, result);
+                        to_json(isolate, arg, result);
                 }
+
                 AppendLine(result);
         }
 }

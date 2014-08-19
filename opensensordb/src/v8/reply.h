@@ -33,9 +33,6 @@ public:
 
                 static Handle<ObjectTemplate> GetNewTemplate(Isolate * i);
  
-               // Register function wich create javascript object "Reply" in global scope
-                static void Register(Handle<ObjectTemplate> global, Isolate* i);
-                static void Constructor(const FunctionCallbackInfo<Value>& info);
                 static void Write(const FunctionCallbackInfo<Value>& info);
                 static void WriteLine(const FunctionCallbackInfo<Value>& info);
                 static void Print(const FunctionCallbackInfo<Value>& info);

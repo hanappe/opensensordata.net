@@ -1,70 +1,53 @@
-# wu analyzer application 
-
 SHELL = /bin/bash
 
-CC = gcc
-CFLAGS = -g -Wall -std=c99
+jsengine_sources = v8/db.cpp v8/account.cpp v8/group.cpp v8/datastream.cpp v8/photostream.cpp v8/point.cpp v8/jsengine.cpp
+jsengine_objects = ${jsengine_sources:.cpp=.o}
+jsengine_libs = libosdb.a -lm
 
-CXX = g++
+lib_sources = osdb.c datapoint.c filemanager.c value.c timestamp.c fileio.c timeseries.c datastream.c list.c hashtable.c log.c
+lib_objects = ${lib_sources:.c=.o}
+lib_libs = -lm
+
+server_sources = server.c server_handler.c jsv8.c
+server_objects = ${server_sources:.c=.o}
+server_libs = -lm
+
+cli_sources = main.c
+cli_objects = ${cli_sources:.c=.o}
+cli_libs = -lm
+
+
+CFLAGS = -g -O0 -Wall -std=c99
+
 CXXFLAGS = -g -Wall -std=c++0x
+#CXXFLAGS += -I./
 
-# V8 Source Path
-V8PATH = /home/low-energy-boinc/v8
-
+#V8PATH = /home/low-energy-boinc/v8
+V8PATH = ../../../v8
 V8OUT = native
 
-CXXFLAGS += -I./ \
-	-I$(V8PATH)/include/
+CXXFLAGS += -I$(V8PATH)/include/ 
 
-#LDFLAGS += -L./depends/v8/lib/ \
-	-L/usr/lib/mysql
+all: opensensordb osdb_cli 
 
-#depends_src = $(addprefix ./ , datastream.cpp)
-depends_src = datastream.cpp \
-	group.cpp \
-	db.cpp \
-	point.cpp \
-	jsengine.cpp
+#libosdb.a: $(lib_objects)
+#	ar rvs $@ $^
 
+osdb_cli: $(lib_objects) $(cli_objects)
+	g++ -g $(CXXFLAGS) $(cli_objects) $(lib_objects) $(cli_libs) -o $@
 
-application_srcs = v8.cpp $(depends_src)
-application_deps = ${application_srcs:%.cpp=%.d}
-application_objs = ${application_srcs:%.cpp=%.o}
+opensensordb: $(lib_objects) $(server_objects) $(jsengine_objects)
+	g++ -g $(CXXFLAGS) $(lib_objects) $(server_objects) $(jsengine_objects) $(server_libs) -o $@ -Wl,--start-group $(V8PATH)/out/$(V8OUT)/obj.target/{tools/gyp/libv8_{base.x64,snapshot},third_party/icu/libicu{uc,i18n,data}}.a -Wl,--end-group -lrt $(application_static_libs) -lmysqlclient -lpthread
 
-#application_static_libs = $(addprefix ./depends/v8/lib/, libv8_base.x64.a \
-	libv8_snapshot.a \
-	libicuuc.a \
-	libicui18n.a \
-	libicudata.a)
+%.o: %.c
+	g++ -c $(CXXFLAGS) $^ -o $@ 
 
-#application_static_libs = libv8_base.x64.a libv8_snapshot.a libicuuc.a libicuil8n.a libicudata.a
-#application_static_libs = libmysqlclient.a
-#application_ldflags = -lv8
-application_ldflags = -lmysqlclient
-depends += $(application_deps)
-objects += $(application_objs) $(application_static_libs)
-programs += v8
+%.o: %.cpp
+	g++ -c $(CXXFLAGS) $^ -o $@ 
 
-generated = $(programs) $(objects) $(depends) stderr.txt
-
-all: $(depends) $(programs)
-
-#application: $(application_objs)
-#	$(CXX) -I$(INCLUDEPATH) application.cpp -o testv8 $(LDFLAGS) $(application_static_libs)
-
-v8: $(application_objs)
-	$(CXX) $(CXXFLAGS) $(application_objs) -o v8 -Wl,--start-group $(V8PATH)/out/$(V8OUT)/obj.target/{tools/gyp/libv8_{base.x64,snapshot},third_party/icu/libicu{uc,i18n,data}}.a -Wl,--end-group -lrt $(application_static_libs) -lmysqlclient
-
-
-#%.d: %.c
-#	$(CC) -o $@ $(CFLAGS) $< -MM -MT '$@ $*.o'
-
-%.d: %.cpp
-	$(CXX) -o $@ $(CXXFLAGS) $< -MM -MT '$@ $*.o'
+install: opensensordb
+	cp opensensordb /usr/local/bin
 
 clean:
-	rm -f $(generated)
+	rm -f $(lib_objects) $(server_objects) $(cli_objects) $(jsengine_objects)
 
-ifneq ($(MAKECMDGOALS),clean)
--include $(depends)
-endif
