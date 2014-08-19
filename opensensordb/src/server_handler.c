@@ -1,9 +1,12 @@
+
 #include <stdlib.h>
 
 #include "server.h"
 #include "osdb_priv.h"
 
-char* server_execute_script(const char* code, list_t* args);
+#include <iostream>
+
+char* server_execute_script(const char* code, list_t* args, char** content_type);
 void server_free_result(char* buffer);
 
 // ----
@@ -123,18 +126,33 @@ void server_handle_script(request_t* request, response_t* response)
 
         log_info("Executing script: %s", script);
 
-        char* result = server_execute_script(code, request->args);
+        char* content_type = 0;
+        char* result = server_execute_script(code, request->args, &content_type);
 
         filemanager_release_script(code);
 
-        int len = strlen(result);
-        
-        response->status = 200;
-        response_content_type(response, "application/json");
-        response->body = result;
-        response->length = len;
-        response->mybuf = 1;
-        response->freebuf = server_free_result;
+
+        int len = result ? strlen(result) : 0;
+
+        // Fill response
+
+        {
+                response->status = 200;
+
+                // Kev: handle content type, quick and dirty...
+                
+                if (content_type) {
+                        response_content_type(response, content_type);
+                        free(content_type);
+                } else {
+                        response_content_type(response, "application/json");
+                }
+                
+                response->body = result;
+                response->length = len;
+                response->mybuf = 1;
+                response->freebuf = server_free_result;
+        }
 }
 
 void server_handle_request(request_t* request, response_t* response)

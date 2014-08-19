@@ -3,6 +3,14 @@
 #include "db.h"
 #include "group.h"
 
+Account::Account() : id(0) {
+}
+
+Account::~Account() {
+        //clear();
+}
+
+
 bool Account::loadFromId(int id) {
         clear();
         //return false;
@@ -10,6 +18,8 @@ bool Account::loadFromId(int id) {
 }
 
 bool Account::loadFromUsername(int id) {
+        // TODO
+
         clear();
         return false;
         //return DB::GetInstance()->loadAccount(this, id);
@@ -47,16 +57,13 @@ Handle<Array> Account::select(Isolate * iso, time_t start, time_t end) const {
         return main_array;
 }
 
-
-Local<Object> Account::JS::GetNewInstance(Isolate * i) {
-
-        Handle<ObjectTemplate> account_template = ObjectTemplate::New();
+Handle<ObjectTemplate> Account::JS::GetNewTemplate(Isolate * i) {
+       Handle<ObjectTemplate> account_template = ObjectTemplate::New();
         account_template->SetInternalFieldCount(1);
                         
-        // set a javascript function
+        // Set a javascript function
         account_template->Set(String::NewFromUtf8(i, "load"), FunctionTemplate::New(i, Load));
-        
-        return account_template->NewInstance();
+        return account_template;
 }
 
 void Account::JS::SetupObject(Local<Object> obj, Account * a, Isolate* i) {
@@ -76,11 +83,13 @@ void Account::JS::SetupObject(Local<Object> obj, Account * a, Isolate* i) {
         Handle<Array> groups_array = Array::New(i, groups.size());
         
         int group_count = 0;
-        for (std::vector<Group*>::iterator it = groups.begin(); it != groups.end(); ++it, group_count++) {
+        for (std::vector<Group*>::iterator it = groups.begin(); it != groups.end(); ++it, ++group_count) {
                 
                 Group * group = (*it);                
                 
-                Local<Object> g_obj = Group::JS::GetNewInstance(i);
+                Handle<ObjectTemplate> g_template = Group::JS::GetNewTemplate(i);
+                Local<Object> g_obj = g_template->NewInstance();
+
                 g_obj->SetInternalField(0, External::New(i, group));
           
                 Group::JS::SetupObject(g_obj, group, i); 
@@ -98,14 +107,15 @@ void Account::JS::Register(Handle<ObjectTemplate> global, Isolate* i) {
 
 
 void Account::JS::Constructor(const FunctionCallbackInfo<Value>& info) {
-        v8::Isolate* i = v8::Isolate::GetCurrent();
+        Isolate* i = Isolate::GetCurrent();
                 
         Account * acc = new Account();
         if (acc) {
-                Local<Object> obj = GetNewInstance(i);
-                obj->SetInternalField(0, External::New(i, acc));
+                Handle<ObjectTemplate> acc_template = GetNewTemplate(i);
+                Local<Object> acc_obj = acc_template->NewInstance();
+                acc_obj->SetInternalField(0, External::New(i, acc));
                 // Create and Return this newly created object
-                info.GetReturnValue().Set(obj);
+                info.GetReturnValue().Set(acc_obj);
         }
 }
 
@@ -180,4 +190,19 @@ void Account::JS::Select(const FunctionCallbackInfo<Value>& info)  {
                 Handle<Array> account_array = account->select(isolate, start_ut, end_ut);
                 info.GetReturnValue().Set(account_array);
         }
+}
+
+
+std::vector<Account*> Account::JS::references;
+
+void Account::JS::AddToRef(Account * account) {
+        references.push_back(account);
+}
+
+void Account::JS::DeleteAllRef() {
+
+        for (std::vector<Account*>::iterator it = references.begin(); it != references.end(); ++it) {
+                delete (*it);
+        }
+        references.clear();        
 }

@@ -25,12 +25,8 @@ using namespace v8;
 class Account {
 public:
 
-        Account() : id(0) {
-	}
-	
-	~Account() {
-                clear();
-	}
+        Account();
+	~Account();
 
         bool loadFromId(int id);
         bool loadFromUsername(int id);
@@ -47,17 +43,24 @@ public:
 	
         struct JS {
 
-                // Create a mew instance of javascript object "Group"
-                static Local<Object> GetNewInstance(Isolate * i);
+                // Create a mew template of javascript object "Accout"
+                static Handle<ObjectTemplate> GetNewTemplate(Isolate * i);
 
-                // Register function wich create javascript object "Group" in global scope
+                // Register function wich create javascript object "Account" in global scope
                 static void Register(Handle<ObjectTemplate> global, Isolate* i);
                 static void Constructor(const FunctionCallbackInfo<Value>& info);
                 static void Load(const FunctionCallbackInfo<Value>& info);
                 static void Select(const FunctionCallbackInfo<Value>& info);
 
-                // Fill 'obj' with group properties
+                // Fill 'obj' with account properties
                 static void SetupObject(Local<Object> obj, Account * a, Isolate* i);
+                
+                // Reference to all cpp object (needed to delete them)
+                static std::vector<Account*> references;
+
+                static void AddToRef(Account * account);
+                static void DeleteAllRef();
+                
         }; // end struct JS
 };
 

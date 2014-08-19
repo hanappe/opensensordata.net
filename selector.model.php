@@ -63,6 +63,9 @@ class Selector
                 } else if ($ext == ".txt") {
                         $this->format = "txt";
                         $s = substr($path, 0, -4);
+                } else if ($ext == ".gif") {
+                        $this->format = "gif";
+                        $s = substr($path, 0, -4);
                 } else {
                         $this->err = "Unrecognised format: " . $path;
                         return false;

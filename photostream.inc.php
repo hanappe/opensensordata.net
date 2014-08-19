@@ -158,7 +158,17 @@ class Photostream
                 return ($mysqli->errno == 0);
         }
 
-        public static function to_path($dir, $sel, $size)
+        public static function row_to_path($dir, $row, $size)
+        {
+                $size = $size? $size : "orig";
+                return sprintf("%s/%d/%04d/%02d/%02d/%02d%02d%02d-%s.jpg",
+                               $dir, $row['photostream'], 
+                               $row['year'], $row['month'], $row['day'],
+                               $row['hour'], $row['minute'], $row['second'],
+                               $size);
+        }
+
+        public static function selector_to_path($dir, $sel, $size)
         {
                 $d = $sel->date;
                 $size = $size? $size : $sel->size;

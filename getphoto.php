@@ -34,7 +34,7 @@ $selector = new Selector();
 if (!$selector->parse_photo($path))
         badRequest($selector->err);
 
-$file = Photostream::to_path($photodir, $selector, NULL);
+$file = Photostream::selector_to_path($photodir, $selector, NULL);
 
 if (!file_exists($file))
         notFound();

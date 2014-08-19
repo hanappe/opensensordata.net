@@ -90,7 +90,24 @@ if ($selector->format == "txt") {
                 echo $url . "\n";
         }
 
- } else {
+ } else if ($selector->format == "gif") {
+
+        $gif = new Imagick();
+        $gif->setFormat("gif");
+
+        for ($i = 0; $i < $results->num_rows; $i++) {
+                $row = $results->fetch_assoc();
+                $filename = Photostream::selector_to_path($photodir, $row, "medium");
+                $frame = new Imagick();
+                $frame->readImage($filename);
+                $frame->setImageDelay(100);
+                $gif->addImage($frame);
+        }
+
+        header("Content-Type: image/gif");
+        echo $gif->getImagesBlob();
+
+ } else if ($selector->format == "json") {
 
         header('Content-type: application/json');
 
@@ -178,6 +195,10 @@ if ($selector->format == "txt") {
         }
 
         echo "]\n";
+
+
+ } else {
+        badRequest("Invalid output type");
  }
 
 db_close();
