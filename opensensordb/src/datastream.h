@@ -13,6 +13,7 @@ struct _datastream_t {
         uint32_t num_datapoints;
         value_t sum;
         list_t* timeseries;
+        timeseries_t* last_timeseries;
         int lock;
 };
 

@@ -97,7 +97,7 @@ static int import_csv(const char* path)
                 if (d == NULL) {
                         d = datastream_load(id);
                         if (d == NULL) {
-                                d = datastream_create(id, 60.0, 3600.0, 0.1);
+                                d = datastream_create(id, 0.5, 3600.0, 0.1);
                                 if (d == NULL) {
                                         fprintf(stderr, "Failed to create the datastream\n");
                                         goto error_recovery;

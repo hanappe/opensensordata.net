@@ -65,6 +65,9 @@ datastream_t* datastream_create(id_t id,
 
 static int _datastream_load(datastream_t* d)
 {
+        if (!filemanager_datastream_exists(d->id))
+                return -1;
+
         int fd = filemanager_open_datastream(d->id);
         if (fd == -1) 
                 return -1;
@@ -88,6 +91,7 @@ static int _datastream_load(datastream_t* d)
                 if (timeseries_read_metadata(ts, fd) != 0)
                         goto error_recovery;
 
+                d->last_timeseries = ts;
                 list_t* e = new_list(ts);
                 
                 if (i == 0) {
@@ -110,11 +114,11 @@ static int _datastream_load(datastream_t* d)
 
 datastream_t* datastream_load(id_t id)
 {
-        // KEV WARNING: constructor with id doesn'nt exist, so I use datastream_create.
-        //datastream_t* d = new_datastream(id);
-        datastream_t* d = datastream_create(id, 0, 0, 0);
-        if (d == NULL) 
+        datastream_t* d = new_datastream();
+        if (d == NULL)
                 return NULL;
+
+        d->id = id;
 
         if (_datastream_load(d) != 0) {
                 delete_datastream(d);
@@ -177,12 +181,18 @@ static inline void datastream_update(datastream_t* d, timestamp_t t, value_t v)
 
 static int datastream_insert_new(datastream_t* d, timestamp_t t, value_t v)
 {
+        if (d->last_timeseries != NULL) {
+                timeseries_close(d->last_timeseries);
+        }
+
         timeseries_t* ts = new_timeseries(d->num_timeseries++, d->id);
         if (ts == NULL)
                 return -1;
         
-        if (timeseries_append(ts, t, v) != 0) 
+        if (timeseries_append(ts, t, v) != 0) {
+                delete_timeseries(ts);
                 return -1;
+        }
         
         d->timeseries = list_append(d->timeseries, ts);
 
@@ -191,6 +201,7 @@ static int datastream_insert_new(datastream_t* d, timestamp_t t, value_t v)
         if ((d->end == 0) || (t > d->end))
                 d->end = t;
 
+        d->last_timeseries = ts;
         datastream_update(d, t, v);
         
         return 0;
@@ -198,45 +209,44 @@ static int datastream_insert_new(datastream_t* d, timestamp_t t, value_t v)
 
 int datastream_insert(datastream_t* d, timestamp_t t, value_t v)
 {
-        timestamp_t tmin, tmax;
+        if (d->last_timeseries == NULL) {
+                return datastream_insert_new(d, t, v);
+        }
 
-        list_t* l = d->timeseries;
-        while (l) {
-                timeseries_t* ts = (timeseries_t*) l->data;
+        if (t <= d->end) {
+                return -1;
+        }
 
-                if (ts->length == 1) {
+        timeseries_t* ts = d->last_timeseries;
 
-                        tmin = ts->start + d->min_period;
-                        tmax = ts->start + d->max_period;
-                        if ((t >= tmin) && (t <= tmax)) {
-                                if (timeseries_append(ts, t, v) == 0) {
-                                        datastream_update(d, t, v);
-                                        return 0;
-                                } else return -1;
-                        } 
+        if (ts->length == 1) {
+                timestamp_t tmin = ts->start + d->min_period;
+                timestamp_t tmax = ts->start + d->max_period;
 
-                } else {
-
-                        if ((ts->start <= t) && (t <= ts->end)) {
-                                if (timeseries_insert(ts, t, v) == 0) {
-                                        datastream_update(d, t, v);
-                                        return 0;
-                                } else return -1;
-                        }
-
-                        tmin = ts->end + (1.0 - d->tolerance) * ts->period;
-                        tmax = ts->end + (1.0 + d->tolerance) * ts->period;
-                        if ((tmin <= t) && (t <= tmax)) {
-                                if (timeseries_append(ts, t, v) == 0) {
-                                        datastream_update(d, t, v);
-                                        return 0;
-                                } else return -1;
+                if ((tmin <= t) && (t <= tmax)) {
+                        if (timeseries_append(ts, t, v) == 0) {
+                                datastream_update(d, t, v);
+                                return 0;
+                        } else {
+                                return -1;
                         }
                 }
 
-                l = l->next;
+        } else {
+                timestamp_t tmin = ts->end + (1.0 - d->tolerance) * ts->period;
+                timestamp_t tmax = ts->end + (1.0 + d->tolerance) * ts->period;
+
+                if ((tmin <= t) && (t <= tmax)) {
+                        if (timeseries_append(ts, t, v) == 0) {
+                                datastream_update(d, t, v);
+                                return 0;
+                        } else {
+                                return -1;
+                        }
+                }
         }
 
+        //printf("new timeseries: (after %lu points) %lu -> %lu\n", (ulong) ts->length, (ulong) ts->end, (ulong) t);
         return datastream_insert_new(d, t, v);
 }
 

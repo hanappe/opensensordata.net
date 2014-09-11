@@ -31,29 +31,34 @@ int filemanager_init(const char* dir)
         return 0;
 }
 
-static int filemanager_create_dirs(id_t id)
+static int filemanager_create_datastream_dirs(id_t id)
 {
         char path[512];
         int a = id % 100;
         int b = (id / 100) % 100;
         int c = (id / 10000) % 100;
 
-        snprintf(path, 512, "%s/%02d", _dir, a);
+        snprintf(path, 512, "%s/datastreams", _dir);
         int err = mkdir(path, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
         if ((err != 0) && (errno != EEXIST))
                 return -1;
 
-        snprintf(path, 512, "%s/%02d/%02d", _dir, a, b);
+        snprintf(path, 512, "%s/datastreams/%02d", _dir, a);
         err = mkdir(path, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
         if ((err != 0) && (errno != EEXIST))
                 return -1;
 
-        snprintf(path, 512, "%s/%02d/%02d/%02d", _dir, a, b, c);
+        snprintf(path, 512, "%s/datastreams/%02d/%02d", _dir, a, b);
         err = mkdir(path, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
         if ((err != 0) && (errno != EEXIST))
                 return -1;
 
-        snprintf(path, 512, "%s/%02d/%02d/%02d/%012d", _dir, a, b, c, id);
+        snprintf(path, 512, "%s/datastreams/%02d/%02d/%02d", _dir, a, b, c);
+        err = mkdir(path, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+        if ((err != 0) && (errno != EEXIST))
+                return -1;
+
+        snprintf(path, 512, "%s/datastreams/%02d/%02d/%02d/%012d", _dir, a, b, c, id);
         err = mkdir(path, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
         if ((err != 0) && (errno != EEXIST))
                 return -1;
@@ -68,7 +73,7 @@ int filemanager_datastream_exists(id_t id)
         int b = (id / 100) % 100;
         int c = (id / 10000) % 100;
 
-        snprintf(path, 512, "%s/%02d/%02d/%02d/%012d/DS.osd", _dir, a, b, c, id);
+        snprintf(path, 512, "%s/datastreams/%02d/%02d/%02d/%012d/DS.osd", _dir, a, b, c, id);
 
         struct stat sb;
         int err = stat(path, &sb);
@@ -82,10 +87,10 @@ int filemanager_create_datastream(id_t id)
         int b = (id / 100) % 100;
         int c = (id / 10000) % 100;
 
-        if (filemanager_create_dirs(id) == -1)
+        if (filemanager_create_datastream_dirs(id) == -1)
                 return -1;
- 
-        snprintf(path, 512, "%s/%02d/%02d/%02d/%012d/DS.osd", _dir, a, b, c, id);
+
+        snprintf(path, 512, "%s/datastreams/%02d/%02d/%02d/%012d/DS.osd", _dir, a, b, c, id);
 
         int fd = open(path, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP);
         if (fd == -1) {
@@ -106,7 +111,7 @@ int filemanager_open_datastream(id_t id)
         void* value;
 
         if ((_fileops != NULL) && (hashtable_lookup(_fileops, id, &value) != 0)) {
-                snprintf(path, 512, "%s/%02d/%02d/%02d/%012d/DS.osd.tmp%d", 
+                snprintf(path, 512, "%s/datastreams/%02d/%02d/%02d/%012d/DS.osd.tmp%d", 
                          _dir, a, b, c, id, getpid());
 
                 int fd = open(path, O_RDWR);
@@ -131,7 +136,7 @@ int filemanager_open_datastream(id_t id)
                 return -1;
 
         } else {
-                snprintf(path, 512, "%s/%02d/%02d/%02d/%012d/DS.osd", _dir, a, b, c, id);
+                snprintf(path, 512, "%s/datastreams/%02d/%02d/%02d/%012d/DS.osd", _dir, a, b, c, id);
 
                 int fd = open(path, O_RDWR);
                 
@@ -152,7 +157,7 @@ int filemanager_open_datastream_description(id_t id)
         int b = (id / 100) % 100;
         int c = (id / 10000) % 100;
 
-        snprintf(path, 512, "%s/%02d/%02d/%02d/%012d/DS.json", _dir, a, b, c, id);
+        snprintf(path, 512, "%s/datastreams/%02d/%02d/%02d/%012d/DS.json", _dir, a, b, c, id);
         
         int fd = open(path, O_RDWR);
         
@@ -172,7 +177,7 @@ int filemanager_lock_datastream(id_t id)
         int b = (id / 100) % 100;
         int c = (id / 10000) % 100;
 
-        snprintf(path, 512, "%s/%02d/%02d/%02d/%012d/DS.lock", _dir, a, b, c, id);
+        snprintf(path, 512, "%s/datastreams/%02d/%02d/%02d/%012d/DS.lock", _dir, a, b, c, id);
  
         int fd = open(path, O_RDWR);
         if (fd == -1)
@@ -215,13 +220,13 @@ static int filemanager_apply_dataseries(id_t id)
         int b = (id / 100) % 100;
         int c = (id / 10000) % 100;
 
-        snprintf(path, 512, "%s/%02d/%02d/%02d/%012d/DS.osd", 
+        snprintf(path, 512, "%s/datastreams/%02d/%02d/%02d/%012d/DS.osd", 
                  _dir, a, b, c, id);
 
-        snprintf(bckpath, 512, "%s/%02d/%02d/%02d/%012d/DS.osd.bck%d", 
+        snprintf(bckpath, 512, "%s/datastreams/%02d/%02d/%02d/%012d/DS.osd.bck%d", 
                  _dir, a, b, c, id, getpid());
 
-        snprintf(tmppath, 512, "%s/%02d/%02d/%02d/%012d/DS.osd.tmp%d", 
+        snprintf(tmppath, 512, "%s/datastreams/%02d/%02d/%02d/%012d/DS.osd.tmp%d", 
                  _dir, a, b, c, id, getpid());
 
         if (rename(path, bckpath) != 0) {
@@ -247,10 +252,10 @@ static int filemanager_restore_backup_dataseries(id_t id)
         int b = (id / 100) % 100;
         int c = (id / 10000) % 100;
 
-        snprintf(path, 512, "%s/%02d/%02d/%02d/%012d/DS.osd", 
+        snprintf(path, 512, "%s/datastreams/%02d/%02d/%02d/%012d/DS.osd", 
                  _dir, a, b, c, id);
 
-        snprintf(bckpath, 512, "%s/%02d/%02d/%02d/%012d/DS.osd.bck%d", 
+        snprintf(bckpath, 512, "%s/datastreams/%02d/%02d/%02d/%012d/DS.osd.bck%d", 
                  _dir, a, b, c, id, getpid());
 
         if (rename(bckpath, path) != 0) {
@@ -269,7 +274,7 @@ static int filemanager_unlink_backup_dataseries(id_t id)
         int b = (id / 100) % 100;
         int c = (id / 10000) % 100;
 
-        snprintf(bckpath, 512, "%s/%02d/%02d/%02d/%012d/DS.osd.bck%d", 
+        snprintf(bckpath, 512, "%s/datastreams/%02d/%02d/%02d/%012d/DS.osd.bck%d", 
                  _dir, a, b, c, id, getpid());
 
         if (unlink(bckpath) != 0) {
@@ -291,7 +296,7 @@ int filemanager_open_timeseries(id_t datastream, id_t timeseries)
 
         if ((_fileops != NULL) && (hashtable_lookup(_fileops, datastream, &value) != 0)) {
 
-                snprintf(path, 512, "%s/%02d/%02d/%02d/%012d/TS%08d.osd.tmp%d", _dir, 
+                snprintf(path, 512, "%s/datastreams/%02d/%02d/%02d/%012d/TS%08d.osd.tmp%d", _dir, 
                          a, b, c, datastream, timeseries, getpid());
 
                 int fd = open(path, O_RDWR);
@@ -316,7 +321,7 @@ int filemanager_open_timeseries(id_t datastream, id_t timeseries)
                 return -1;
 
         } else {
-                snprintf(path, 512, "%s/%02d/%02d/%02d/%012d/TS%08d.osd", _dir, 
+                snprintf(path, 512, "%s/datastreams/%02d/%02d/%02d/%012d/TS%08d.osd", _dir, 
                          a, b, c, datastream, timeseries);
 
                 int fd = open(path, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP);
@@ -352,13 +357,13 @@ static int filemanager_apply_timeseries(id_t datastream, id_t timeseries)
         int b = (datastream / 100) % 100;
         int c = (datastream / 10000) % 100;
 
-        snprintf(path, 512, "%s/%02d/%02d/%02d/%012d/TS%08d.osd", 
+        snprintf(path, 512, "%s/datastreams/%02d/%02d/%02d/%012d/TS%08d.osd", 
                  _dir, a, b, c, datastream, timeseries);
 
-        snprintf(bckpath, 512, "%s/%02d/%02d/%02d/%012d/TS%08d.osd.bck%d", 
+        snprintf(bckpath, 512, "%s/datastreams/%02d/%02d/%02d/%012d/TS%08d.osd.bck%d", 
                  _dir, a, b, c, datastream, timeseries, getpid());
 
-        snprintf(tmppath, 512, "%s/%02d/%02d/%02d/%012d/TS%08d.osd.tmp%d", 
+        snprintf(tmppath, 512, "%s/datastreams/%02d/%02d/%02d/%012d/TS%08d.osd.tmp%d", 
                  _dir, a, b, c, datastream, timeseries, getpid());
 
         if (rename(path, bckpath) != 0) {
@@ -384,10 +389,10 @@ static int filemanager_backup_timeseries(id_t datastream, id_t timeseries)
         int b = (datastream / 100) % 100;
         int c = (datastream / 10000) % 100;
                 
-        snprintf(path, 512, "%s/%02d/%02d/%02d/%012d/TS%08d.osd", _dir, 
+        snprintf(path, 512, "%s/datastreams/%02d/%02d/%02d/%012d/TS%08d.osd", _dir, 
                  a, b, c, datastream, timeseries);
                 
-        snprintf(bckpath, 512, "%s/%02d/%02d/%02d/%012d/TS%08d.osd.bck%d", _dir, 
+        snprintf(bckpath, 512, "%s/datastreams/%02d/%02d/%02d/%012d/TS%08d.osd.bck%d", _dir, 
                  a, b, c, datastream, timeseries, getpid());
                 
         if (rename(path, bckpath) != 0) {
@@ -406,7 +411,7 @@ static int filemanager_unlink_backup_timeseries(id_t datastream, id_t timeseries
         int b = (datastream / 100) % 100;
         int c = (datastream / 10000) % 100;
 
-        snprintf(bckpath, 512, "%s/%02d/%02d/%02d/%012d/TS%08d.osd.bck%d", _dir, 
+        snprintf(bckpath, 512, "%s/datastreams/%02d/%02d/%02d/%012d/TS%08d.osd.bck%d", _dir, 
                  a, b, c, datastream, timeseries, getpid());
 
         if (unlink(bckpath) != 0) {
@@ -426,10 +431,10 @@ static int filemanager_restore_backup_timeseries(id_t datastream, id_t timeserie
         int b = (datastream / 100) % 100;
         int c = (datastream / 10000) % 100;
                 
-        snprintf(path, 512, "%s/%02d/%02d/%02d/%012d/TS%08d.osd", _dir, 
+        snprintf(path, 512, "%s/datastreams/%02d/%02d/%02d/%012d/TS%08d.osd", _dir, 
                  a, b, c, datastream, timeseries);
                 
-        snprintf(bckpath, 512, "%s/%02d/%02d/%02d/%012d/TS%08d.osd.bck%d", _dir, 
+        snprintf(bckpath, 512, "%s/datastreams/%02d/%02d/%02d/%012d/TS%08d.osd.bck%d", _dir, 
                  a, b, c, datastream, timeseries, getpid());
                 
         if (rename(bckpath, path) != 0) {
@@ -448,7 +453,7 @@ static int _filemanager_unlink_timeseries(id_t datastream, id_t timeseries)
         int b = (datastream / 100) % 100;
         int c = (datastream / 10000) % 100;
                 
-        snprintf(path, 512, "%s/%02d/%02d/%02d/%012d/TS%08d.osd", _dir, 
+        snprintf(path, 512, "%s/datastreams/%02d/%02d/%02d/%012d/TS%08d.osd", _dir, 
                  a, b, c, datastream, timeseries);
                 
         if (unlink(path) != 0) {
@@ -747,8 +752,8 @@ int filemanager_get_script(const char* account, const char* name, char** script)
         char a = account[0];
         char b = account[1];
 
-        snprintf(path, 512, "%s/%c/%c/%s/scripts/%s.js", _dir, a, b, account, name);
-        //snprintf(path, 512, "%s/%c/%c/%s/scripts/%s", _dir, a, b, account, name);
+        snprintf(path, 512, "%s/accounts/%c/%c/%s/scripts/%s.js", _dir, a, b, account, name);
+        //snprintf(path, 512, "%s/accounts/%c/%c/%s/scripts/%s", _dir, a, b, account, name);
 
         if ((stat(path, &sb) != 0)
             || !S_ISREG(sb.st_mode)
