@@ -1,3 +1,4 @@
+
 #include "db.h"
 
 #include <iostream>
@@ -355,13 +356,14 @@ bool DB::loadDatastream(Datastream * datastream, int id) {
                                 
                         } //end while
                         mysql_free_result(res);
+                } else {
+                        fprintf(stderr, "loadDatastream error, invalid datastream id (?)\n");
                 }
 
-                //std::cout << "DB::loadDatastream result B " << result << std::endl;
-
-                if (!result)
+                if (!result) {
                         return false;
-                
+                }
+
                 result = false;
 
 
@@ -409,11 +411,145 @@ bool DB::loadDatastream(Datastream * datastream, int id) {
                         } // end while
                         datastream->endDatarow();
                         mysql_free_result(res);
-                } // end if
+                } else {
+                        fprintf(stderr, "loadDatastream error, invalid query.\n");
+                }
 
                 //std::cout << "DB::loadDatastream result B" << result << std::endl;
         }
        
+        
+        return result;
+}
+
+bool DB::loadDatastreamFromRange(Datastream * datastream, int id, time_t start, time_t end) {
+
+        //std::cout << "DB::loadDatastreamFromRange" << std::endl;
+        
+        bool result =  false;
+        
+        if (datastream && isConnected()) {
+
+                std::ostringstream s;
+                
+                s << "SELECT `id`,`owner`,`name`,`description` FROM `datastream` WHERE `id`=";
+                s << id;
+                s << ";";
+                
+                const std::string& q1 = s.str();
+                
+                if(mysql_real_query(mMysql, q1.data(), q1.size()) == 0) { // success    
+                        
+
+                        MYSQL_ROW row;
+                        MYSQL_RES * res = 0;
+                        my_ulonglong num_rows = 0;
+                        
+                        res = mysql_store_result(mMysql);
+                        num_rows = mysql_num_rows(res);
+                       
+                        if (num_rows != 1) {
+                                mysql_free_result(res);
+                                return false;
+                        }
+
+                        result = true;
+
+                        while ((row = mysql_fetch_row(res)) != NULL) {
+                                // GET DATAPOINTS
+
+                                
+                                if (row[0]) {
+                                        datastream->id = atoi(row[0]);
+                                }
+                                if (row[1]) {
+                                        datastream->ownerId = atoi(row[1]);
+                                }
+                                
+                                char * name = row[2];
+                                if (name && strlen(name) < 512) {
+                                        strcpy(datastream->name, name);
+                                } else {
+                                        fprintf(stderr, "loadDatastreamFromRange error, invalid name.\n");
+                                }
+                                
+                                char * desc = row[3];
+                                if (name && strlen(desc) < 512) {
+                                        strcpy(datastream->description, desc);
+                                } else {
+                                        fprintf(stderr, "loadDatastreamFromRange error, invalid description.\n");
+                                }                                
+                                
+                        } //end while
+                        mysql_free_result(res);
+                } else {
+                        fprintf(stderr, "loadDatastreamFromRange error, invalid datastream id (?)\n");
+                }
+
+                //std::cout << "DB::loadDatastream result B " << result << std::endl;
+
+                if (!result) {
+                        return false;
+                }
+
+                result = false;
+
+                std::ostringstream s2;
+                s2 << "SELECT UNIX_TIMESTAMP( `datetime` ) , `value`\n"
+                        "FROM `datapoints`\n"
+                        "WHERE `datastream` =" << id << " \n"
+                        "AND (\n"
+                        "UNIX_TIMESTAMP( `datetime` )\n"
+                        "BETWEEN " << start <<  " \n"
+                        "AND " << end << " \n"
+                        ");";
+
+                const std::string& q2 = s2.str();
+                
+                if(mysql_real_query(mMysql, q2.data(), q2.size()) == 0) { // success    
+                        
+                        result = true;
+                        
+                        MYSQL_ROW row;
+                        MYSQL_RES * res = 0;
+                        my_ulonglong num_rows = 0;
+                        
+                        res = mysql_store_result(mMysql);
+                        num_rows = mysql_num_rows(res);
+                        
+                        //std::cout << "num_rows: " << num_rows << std::endl;
+
+                        while ((row = mysql_fetch_row(res)) != NULL) {
+
+                                // Simple Way
+
+                                if (row[0] && row[1]) { // datetime and value
+                                        const time_t time = atoi(row[0]);
+                                        const double value = atof(row[1]);
+
+                                        datastream->appendDatapoints(row[0], time, value);
+
+                                        // Contiguous way
+                                        datastream->append(row[0], time, value);
+                                } else {
+                                        if (!row[0]) {
+                                                fprintf(stderr, "'datetime' doesn't exist in this datapoint row...\n");
+                                        } else if (!row[1]) {
+                                                // Contiguous Way
+                                                datastream->endDatarow();
+                                        }
+                                }
+
+                                
+                        } // end while
+
+                        datastream->endDatarow();
+                        mysql_free_result(res);
+
+                } else {
+                        fprintf(stderr, "loadDatastreamFromRange error, invalid query.\n");
+                }
+        }
         
         return result;
 }

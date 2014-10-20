@@ -50,10 +50,9 @@ public:
 	~Datastream();
 
         bool load(int id);
-        bool loadContiguous(int id);
+        bool loadFromRange(int id, time_t start, time_t end);
 	void print() const;
 	void clear();
-        void clearContiguous();
 
         Handle<Array> select(Isolate * i, time_t start, time_t end) const;
         Handle<Array> select2(Isolate * i, time_t start, time_t end) const;

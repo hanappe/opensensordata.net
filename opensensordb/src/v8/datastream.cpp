@@ -26,21 +26,18 @@ Datastream::Datastream() :
 }
 	
 Datastream::~Datastream() {
-        std::cout << "Datastream::~Datastream()" << std::endl;
-        
+        std::cout << "Datastream::~Datastream()" << std::endl;        
         clear();
-        //clearContiguous();
 }
 
 bool Datastream::load(int id) {
         clear();
-        clearContiguous();
         return DB::GetInstance()->loadDatastream(this, id);  
 }
 
-bool Datastream::loadContiguous(int id) {
-        clearContiguous();
-        return DB::GetInstance()->loadDatastreamContiguous(this, id);  
+bool Datastream::loadFromRange(int id, time_t start, time_t end) {
+        clear();
+        return DB::GetInstance()->loadDatastreamFromRange(this, id, start, end);  
 }
 
 void Datastream::print() const {
@@ -62,18 +59,6 @@ void Datastream::clear() {
         for (std::vector<Datarow*>::iterator it = datarows.begin(); it != datarows.end(); ++it) {
                 delete (*it);
         }
-
-        datarows.clear();
-
-        //TODO free all strtime
-}
-
-
-void Datastream::clearContiguous() {
-
-        for (std::vector<Datarow*>::iterator it = datarows.begin(); it != datarows.end(); ++it) {
-                delete (*it);
-        };
 
         datarows.clear();
 
@@ -147,7 +132,8 @@ void Datastream::beginDatarow() {
         current = new Datarow;
 }
 
-void Datastream::append(char * strtime, time_t time, double value) {
+void Datastream::append(char * strtime, time_t time, double value)
+{
         if (!current) {
                 beginDatarow();
         }
@@ -158,7 +144,8 @@ void Datastream::append(char * strtime, time_t time, double value) {
         current->push_back(d);
 }
 
-void Datastream::endDatarow() {
+void Datastream::endDatarow()
+{
         if (current) {
                 datarows.push_back(current);
                 current = 0;
@@ -166,7 +153,8 @@ void Datastream::endDatarow() {
 }
 
 
-Handle<Array> Datastream::select(Isolate * iso, time_t start, time_t end) const {
+Handle<Array> Datastream::select(Isolate * iso, time_t start, time_t end) const
+{
 
         Handle<Array> datapoints_array = Array::New(iso, 0);
 
@@ -189,7 +177,8 @@ Handle<Array> Datastream::select(Isolate * iso, time_t start, time_t end) const 
         return datapoints_array;
 }
 
-Handle<Array> Datastream::select2(Isolate * iso, time_t start, time_t end) const {
+Handle<Array> Datastream::select2(Isolate * iso, time_t start, time_t end) const
+{
 
         //std::cout << "Datastream::select2: " << std::endl;
         Handle<Array> datarows_array = Array::New(iso, 0);
@@ -236,7 +225,8 @@ Handle<Array> Datastream::select2(Isolate * iso, time_t start, time_t end) const
 
 // Datastream::JS
 
-Handle<ObjectTemplate> Datastream::JS::GetNewTemplate(Isolate * i) {
+Handle<ObjectTemplate> Datastream::JS::GetNewTemplate(Isolate * i)
+{
 
         Handle<ObjectTemplate> ds_template = ObjectTemplate::New();
         ds_template->SetInternalFieldCount(1);
@@ -258,7 +248,8 @@ Handle<ObjectTemplate> Datastream::JS::GetNewTemplate(Isolate * i) {
         return ds_template;
 }
 
-void Datastream::JS::SetupObject(Local<Object> obj, const Datastream * d, Isolate* i) {
+void Datastream::JS::SetupObject(Local<Object> obj, const Datastream * d, Isolate* i)
+{
 
         if (!d) {
                 fprintf(stderr, "Datastream::JS::SetupObject error, Datastream is null");
@@ -275,12 +266,14 @@ void Datastream::JS::SetupObject(Local<Object> obj, const Datastream * d, Isolat
         //obj->Set(String::NewFromUtf8(i, "select"), FunctionTemplate::New(i, Select));
 }
 
-void Datastream::JS::Register(Handle<ObjectTemplate> global, Isolate* i) {
+void Datastream::JS::Register(Handle<ObjectTemplate> global, Isolate* i)
+{
         global->Set(String::NewFromUtf8(i, "Datastream"), FunctionTemplate::New(i, Constructor));
 }
 
 
-void Datastream::JS::Constructor(const FunctionCallbackInfo<Value>& info) {
+void Datastream::JS::Constructor(const FunctionCallbackInfo<Value>& info)
+{
         Isolate* i = Isolate::GetCurrent();
 
         const Handle<Value>& arg1 = info[0]; 
@@ -306,7 +299,45 @@ void Datastream::JS::Constructor(const FunctionCallbackInfo<Value>& info) {
         }
 }
 
-void Datastream::JS::Load(const FunctionCallbackInfo<Value>& info ) {
+void Datastream::JS::Load(const FunctionCallbackInfo<Value>& info)
+{
+        Isolate * isolate = info.GetIsolate();
+        
+        Local<Object> self = info.Holder();
+        Local<External> wrap = Local<External>::Cast(self->GetInternalField(0));
+        void* ptr = wrap->Value();
+        
+        Datastream * datastream = static_cast<Datastream*>(ptr);
+        
+        const Handle<Value>& arg1 = info[0];
+        const Handle<Value>& arg2 = info[1];
+        const Handle<Value>& arg3 = info[2];
+
+        bool has_id = !arg1.IsEmpty();
+        bool has_date = !arg2.IsEmpty() && !arg3.IsEmpty();
+                
+        if (has_id && has_date) {
+                const int datastream_id = arg1->Int32Value();
+                if (has_date) {
+                        // Get only data between the interval
+                        const double start_t = arg2->NumberValue();
+                        const long start_ut = (long)start_t / 1000;
+                        const double end_t = arg3->NumberValue();
+                        const long end_ut = (long)end_t / 1000;
+
+                        datastream->loadFromRange(datastream_id, start_ut, end_ut);
+                } else {
+                        // Get all data
+                        datastream->load(datastream_id);
+                }
+                // Fill this "Datastream" javascript object With properties
+                SetupObject(info.This(), datastream, isolate);
+        }        
+}
+
+/*
+void Datastream::JS::Load(const FunctionCallbackInfo<Value>& info)
+{
 
         Isolate * isolate = info.GetIsolate();
         
@@ -327,6 +358,7 @@ void Datastream::JS::Load(const FunctionCallbackInfo<Value>& info ) {
         //Fill this "Datastream" javascript object With properties
         SetupObject(info.This(), datastream, isolate);
 }
+*/
 
 void Datastream::JS::Select(const FunctionCallbackInfo<Value>& info)  {
 
@@ -567,7 +599,7 @@ void Datastream::JS::TotalTime(const FunctionCallbackInfo<Value>& info) {
 
         //Handle<Array> array = datastream->toV8Array(isolate);
 
-        time_t total_time = 0;
+        //time_t total_time = 0;
 
         time_t begin_time = 0;
         time_t last_time = 0;

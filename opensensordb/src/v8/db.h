@@ -26,6 +26,7 @@ class DB {
   bool loadGroup(Group * group, int id);
 
   bool loadDatastream(Datastream * datastream, int id);
+  bool loadDatastreamFromRange(Datastream * datastream, int id, time_t start, time_t end);
   bool loadDatastreamContiguous(Datastream * datastream, int id);
 
   bool loadPhotostream(Photostream * photostream, int id);
