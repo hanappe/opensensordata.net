@@ -16,76 +16,76 @@
 
 using namespace v8;
 
-//namespace {
 
-        // Create the global javascript variable "args" and fill it with args list
-        Handle<ObjectTemplate> createArgs(Isolate* isolate, list_t* args) {
 
+// Create the global javascript variable "args" and fill it with args list
+Handle<ObjectTemplate> createArgs(Isolate* isolate, list_t* args) {
+        
+        
+        Handle<ObjectTemplate> args_obj = ObjectTemplate::New(isolate);
+        
+        //printf("args<\n");
+        while (args) {
+                pair_t* p = (pair_t*) args->data;
                 
-                Handle<ObjectTemplate> args_obj = ObjectTemplate::New(isolate);
-
-                //printf("args<\n");
-                while (args) {
-                        pair_t* p = (pair_t*) args->data;
-
-                        //printf("%s = %s\n", p->name, p->value);
-                        //std::cout << "test:[" << p->value << "]" <<  std::endl;
-                        if (p->value) {
-                                //std::cout << "test2:[" << p->value << "]" <<  std::endl;
-                                args_obj->Set(v8::String::NewFromUtf8(isolate, p->name),
-                                              v8::String::NewFromUtf8(isolate, p->value));
-                        }
-
-                        args = args->next;
+                //printf("%s = %s\n", p->name, p->value);
+                //std::cout << "test:[" << p->value << "]" <<  std::endl;
+                if (p->value) {
+                        //std::cout << "test2:[" << p->value << "]" <<  std::endl;
+                        args_obj->Set(v8::String::NewFromUtf8(isolate, p->name),
+                                      v8::String::NewFromUtf8(isolate, p->value));
                 }
-                //printf(">\n");
                 
-                return args_obj;
+                args = args->next;
         }
+        //printf(">\n");
+        
+        return args_obj;
+}
 
-        // Initialize the global object contains functions and objects
-        // like "Print" (function), "args" (object) or "Reply" (object)
+// Initialize the global object contains functions and objects
+// like "Print" (function), "args" (object) or "Reply" (object)
 
-        void InitiliazeGlobalObject(v8::Isolate* i, v8::Handle<v8::ObjectTemplate> global, list_t* args) {
-                // Bind the global 'print' function to the C++ Print callback.        
-                global->Set(String::NewFromUtf8(i, "print"), FunctionTemplate::New(i, Print));
+void InitiliazeGlobalObject(v8::Isolate* i, v8::Handle<v8::ObjectTemplate> global, list_t* args) {
+        // Bind the global 'print' function to the C++ Print callback.        
+        global->Set(String::NewFromUtf8(i, "print"), FunctionTemplate::New(i, Print));
+        
+        // Bind the global 'read' function to the C++ Read callback.
+        global->Set(String::NewFromUtf8(i, "read"), FunctionTemplate::New(i, Read));
+        // Bind the global 'load' function to the C++ Load callback.
+        global->Set(String::NewFromUtf8(i, "load"), FunctionTemplate::New(i, Load));
+        // Bind the 'quit' function
+        //global->Set(String::NewFromUtf8(i, "quit"), FunctionTemplate::New(i, Quit));
+        global->Set(String::NewFromUtf8(i, "exit"), FunctionTemplate::New(i, Exit));
+        // Bind the 'version' function
+        global->Set(String::NewFromUtf8(i, "version"), FunctionTemplate::New(i, Version));
+        
+        // Add Account/Group/Datastream/... constructors
+        
+        Point::JS::Register(global, i);
+        Account::JS::Register(global, i);                
+        Group::JS::Register(global, i);
+        Datastream::JS::Register(global, i);
+        Photostream::JS::Register(global, i);
+        
+        // Set the "args" object which contains arguments passed by url
+        
+        global->Set(String::NewFromUtf8(i, "args"), createArgs(i, args));
+        
+        // Set the Reply object wich contains the body and the content type of the request
+        
+        Handle<ObjectTemplate> reply_obj = Reply::JS::GetNewTemplate(i);
+        global->Set(String::NewFromUtf8(i, "Reply"), reply_obj);
+}
 
-                // Bind the global 'read' function to the C++ Read callback.
-                global->Set(String::NewFromUtf8(i, "read"), FunctionTemplate::New(i, Read));
-                // Bind the global 'load' function to the C++ Load callback.
-                global->Set(String::NewFromUtf8(i, "load"), FunctionTemplate::New(i, Load));
-                // Bind the 'quit' function
-                //global->Set(String::NewFromUtf8(i, "quit"), FunctionTemplate::New(i, Quit));
-                global->Set(String::NewFromUtf8(i, "exit"), FunctionTemplate::New(i, Exit));
-                // Bind the 'version' function
-                global->Set(String::NewFromUtf8(i, "version"), FunctionTemplate::New(i, Version));
 
-                // Add Account/Group/Datastream/... constructors
-
-                Point::JS::Register(global, i);
-                Account::JS::Register(global, i);                
-                Group::JS::Register(global, i);
-                Datastream::JS::Register(global, i);
-                Photostream::JS::Register(global, i);
-                
-                // Set the "args" object which contains arguments passed by url
-
-                global->Set(String::NewFromUtf8(i, "args"), createArgs(i, args));
-
-                // Set the Reply object wich contains the body and the content type of the request
-                
-                Handle<ObjectTemplate> reply_obj = Reply::JS::GetNewTemplate(i);
-                global->Set(String::NewFromUtf8(i, "Reply"), reply_obj);
-        }
-
-
-        void DeleteAllCppObjects() {
-                //Point::JS::DeleteAllRef();
-                Datastream::JS::DeleteAllRef();
-                Photostream::JS::DeleteAllRef();
-                Group::JS::DeleteAllRef();
-                Account::JS::DeleteAllRef();
-        }
+void DeleteAllCppObjects() {
+        //Point::JS::DeleteAllRef();
+        Datastream::JS::DeleteAllRef();
+        Photostream::JS::DeleteAllRef();
+        Group::JS::DeleteAllRef();
+        Account::JS::DeleteAllRef();
+}
 
 
 enum ScriptError {
@@ -101,7 +101,7 @@ enum ScriptError {
 char * GetError(ScriptError e, char * msg) {
         char buf[512];
         char error[256];
-
+        
         switch(e) {
         case UNIMPL : { sprintf(error, "Not yet implemented"); break;}
         case UNDEF : { sprintf(error, "Undefined error"); break;}
@@ -125,8 +125,6 @@ char * GetError(ScriptError e) {
         return GetError(e, NULL);
 }
 
-//}
-
 
 char* server_execute_script(const char* code, list_t* args, char** content_type) {
         
@@ -139,7 +137,7 @@ char* server_execute_script(const char* code, list_t* args, char** content_type)
         }
 
         v8::Isolate* isolate = v8::Isolate::New();
-
+        
         {
                 v8::Isolate::Scope iscope(isolate);
                 //v8::V8::Initialize();

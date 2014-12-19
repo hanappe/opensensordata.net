@@ -297,6 +297,147 @@ bool DB::loadGroup(Group * group, int id) {
         return true;
 }
 
+bool DB::loadGroupFromRange(Group * group, int id, time_t start, time_t end) {
+        
+
+        if (start > end) {
+                fprintf(stderr, "loadGroupFromRange error, 'start' datetime is greater than 'end' datetime.\n");
+                return false;
+        }
+
+        if (group && isConnected()) {
+                std::ostringstream s;
+
+                // Get group info
+
+                s << "SELECT id, owner, app, name, description FROM `group` WHERE `id`=";
+                s << id;
+                s << ";";
+                
+                const std::string& q1 = s.str();
+
+                bool group_loaded = false;
+                if(mysql_real_query(mMysql, q1.data(), q1.size()) == 0) { // success    
+
+                        group_loaded = true;
+                        
+                        MYSQL_ROW row;
+                        MYSQL_RES * res = 0;
+                        my_ulonglong num_rows = 0;
+                        
+                        res = mysql_store_result(mMysql);
+                        num_rows = mysql_num_rows(res);
+
+                        if (num_rows != 1) {
+                                return false;
+                        }
+
+                        while ((row = mysql_fetch_row(res)) != NULL) {
+                                
+                                if (row[0]) {
+                                        group->id = atoi(row[0]);
+                                }
+                                if (row[1]) {
+                                        group->ownerId = atoi(row[1]);
+                                }
+                                
+                                if (row[2]) {
+                                        group->ownerId = atoi(row[2]);
+                                }
+                                
+                                char * name = row[3];
+                                if (name && strlen(name) < 256) {
+                                        strcpy(group->name, name);
+                                } else {
+                                        fprintf(stderr, "loadGroup error, invalid name.\n");
+                                }                                
+                        } //end while
+                        mysql_free_result(res);
+                } else {
+                        fprintf(stderr, "loadGroupFromRange error, invalid datastream id (?)\n");
+                }
+
+                if (!group_loaded) {
+                        fprintf(stderr, "loadGroupFromRange error, select from 'group' error.\n");
+                        return false;
+                }
+
+                // Load Datastreams
+
+                std::ostringstream s2;
+                s2 << "SELECT datastream FROM `group_datastreams` WHERE `gid`=";
+                s2 << id;
+                s2 << " ORDER BY `index`;";
+
+                const std::string& q2 = s2.str();
+
+
+
+                if(mysql_real_query(mMysql, q2.data(), q2.size()) == 0) { // success    
+
+                        MYSQL_ROW row;
+                        MYSQL_RES * res = 0;
+                        my_ulonglong num_rows = 0;
+                        
+                        res = mysql_store_result(mMysql);
+                        num_rows = mysql_num_rows(res);
+
+                        fprintf(stdout, "loadGroupFromRange, num_rows: %lld\n", num_rows);
+
+                        while ((row = mysql_fetch_row(res)) != NULL) {
+
+                                int datastream_id = 0;
+                                if (row[0]) {
+                                      datastream_id  = atoi(row[0]);
+                                      fprintf(stdout, "loadGroup from range, datastream, %d\n", datastream_id);
+                                      Datastream * datastream = new Datastream;
+                                      loadDatastreamFromRange(datastream, datastream_id, start, end);
+                                      group->datastreams.push_back(datastream);
+                                }
+                        } //end while
+                        mysql_free_result(res);
+                } // end if
+
+                //fprintf(stderr, "'datetime' doesn't exist in this datapoint row...\n");
+                
+                // Load Photostreams
+                
+                std::ostringstream s3;
+                s3 << "SELECT photostream FROM `group_photostreams` WHERE `gid`="
+                << id
+                << " ORDER BY `index`;";
+                
+                const std::string& q3 = s3.str();
+                
+                if(mysql_real_query(mMysql, q3.data(), q3.size()) == 0) { // success    
+                        
+                        MYSQL_ROW row;
+                        MYSQL_RES * res = 0;
+                        my_ulonglong num_rows = 0;
+                        
+                        res = mysql_store_result(mMysql);
+                        num_rows = mysql_num_rows(res);
+
+                        std::cout << "DB::loadGroup photostream rows: " << num_rows << std::endl;
+                
+                        while ((row = mysql_fetch_row(res)) != NULL) {
+                                
+                                int photostream_id = 0;
+                                if (row[0]) {
+                                        photostream_id  = atoi(row[0]);
+                                        Photostream * photostream = new Photostream;
+                                        loadPhotostreamFromRange(photostream, photostream_id, start, end);
+                                        group->photostreams.push_back(photostream);
+                                }
+                        } //end while
+                        mysql_free_result(res);
+                } // end if
+        } // end group && isConnected
+ 
+        return true;
+}
+
+
 
 bool DB::loadDatastream(Datastream * datastream, int id) {
         
@@ -424,8 +565,13 @@ bool DB::loadDatastream(Datastream * datastream, int id) {
 
 bool DB::loadDatastreamFromRange(Datastream * datastream, int id, time_t start, time_t end) {
 
-        //std::cout << "DB::loadDatastreamFromRange" << std::endl;
+        std::cout << "DB::loadDatastreamFromRange" << std::endl;
         
+        if (start > end) {
+                fprintf(stderr, "loadDatastreamFromRange error, 'start' datetime is greater than 'end' datetime.\n");
+                return false;
+        }
+
         bool result =  false;
         
         if (datastream && isConnected()) {
@@ -440,7 +586,7 @@ bool DB::loadDatastreamFromRange(Datastream * datastream, int id, time_t start, 
                 
                 if(mysql_real_query(mMysql, q1.data(), q1.size()) == 0) { // success    
                         
-
+                        std::cout << "DB::loadDatastreamFromRange success: " << id << std::endl;
                         MYSQL_ROW row;
                         MYSQL_RES * res = 0;
                         my_ulonglong num_rows = 0;
@@ -495,17 +641,30 @@ bool DB::loadDatastreamFromRange(Datastream * datastream, int id, time_t start, 
                 result = false;
 
                 std::ostringstream s2;
-                s2 << "SELECT UNIX_TIMESTAMP( `datetime` ) , `value`\n"
-                        "FROM `datapoints`\n"
-                        "WHERE `datastream` =" << id << " \n"
-                        "AND (\n"
-                        "UNIX_TIMESTAMP( `datetime` )\n"
-                        "BETWEEN " << start <<  " \n"
-                        "AND " << end << " \n"
-                        ");";
+
+                if (start == 0 && end == 0) {
+
+                        // Get all datapoints
+
+                        s2 << "SELECT UNIX_TIMESTAMP(`datetime`),`value` FROM `datapoints` WHERE `datastream`=";
+                        s2 << id;
+                        s2 << " ORDER BY `datetime`;";
+                } else {
+                        
+                        // Get datapoints in datetime range
+                        
+                        s2 << "SELECT UNIX_TIMESTAMP( `datetime` ) , `value`\n"
+                                "FROM `datapoints`\n"
+                                "WHERE `datastream`= " << id << " \n"
+                                "AND (\n"
+                                "UNIX_TIMESTAMP( `datetime` )\n"
+                                "BETWEEN " << start <<  " \n"
+                                "AND " << end << " \n"
+                                ");";
+                }
 
                 const std::string& q2 = s2.str();
-                
+
                 if(mysql_real_query(mMysql, q2.data(), q2.size()) == 0) { // success    
                         
                         result = true;
@@ -517,8 +676,6 @@ bool DB::loadDatastreamFromRange(Datastream * datastream, int id, time_t start, 
                         res = mysql_store_result(mMysql);
                         num_rows = mysql_num_rows(res);
                         
-                        //std::cout << "num_rows: " << num_rows << std::endl;
-
                         while ((row = mysql_fetch_row(res)) != NULL) {
 
                                 // Simple Way
@@ -658,10 +815,9 @@ bool DB::loadPhotostream(Photostream * photostream, int id) {
                                 
                         } //end while
                         mysql_free_result(res);
-                } // end if
-
-                //REMOVE THIS
-                //return true;
+                } else {
+                        fprintf(stderr, "loadPhotostream error, invalid photostream id (?)\n");
+                }
 
                 if (!ps_loaded) {
                         return false;
@@ -707,7 +863,9 @@ bool DB::loadPhotostream(Photostream * photostream, int id) {
                                 
                         } // end while
                         mysql_free_result(res);
-                } // end if
+                } else {
+                        fprintf(stderr, "loadPhotostream error, invalid query.\n");
+                }
         }
        
         
@@ -715,7 +873,140 @@ bool DB::loadPhotostream(Photostream * photostream, int id) {
 }
 
 
-  
+bool DB::loadPhotostreamFromRange(Photostream* photostream, int id, time_t start, time_t end) {
+        
+        if (start > end) {
+                fprintf(stderr, "loadPhotostreamFromRange error, 'start' datetime is greater than 'end' datetime.\n");
+                return false;
+        }
+
+        if (photostream && isConnected()) {
+
+                std::ostringstream s;
+                
+                s << "SELECT `id`,`owner`,`name`,`description` FROM `photostream` WHERE `id`=";
+                s << id;
+                s << ";";
+                
+                const std::string& q1 = s.str();
+
+                bool ps_loaded =  false;                
+                if(mysql_real_query(mMysql, q1.data(), q1.size()) == 0) { // success    
+                        
+                        ps_loaded = true;
+                        MYSQL_ROW row;
+                        MYSQL_RES * res = 0;
+                        my_ulonglong num_rows = 0;
+                        
+                        res = mysql_store_result(mMysql);
+                        num_rows = mysql_num_rows(res);
+
+                        if (num_rows != 1) {
+                                return false;
+                        }
+
+                        while ((row = mysql_fetch_row(res)) != NULL) {
+                                if (row[0]) {
+                                        photostream->id = atoi(row[0]);
+                                }
+                                if (row[1]) {
+                                        photostream->ownerId = atoi(row[1]);
+                                }
+                                
+                                char * name = row[2];
+                                if (name && strlen(name) < 512) {
+                                        strcpy(photostream->name, name);
+                                } else {
+                                        fprintf(stderr, "loadPhotostreamFromRange error, invalid name.\n");
+                                }
+                                
+                                char * desc = row[3];
+                                if (name && strlen(desc) < 512) {
+                                        strcpy(photostream->description, desc);
+                                } else {
+                                        fprintf(stderr, "loadPhotostreamFromRange error, invalid description.\n");
+                                }
+                                
+                                
+                        } //end while
+                        mysql_free_result(res);
+                } else {
+                        fprintf(stderr, "loadPhotostreamFromRange error, invalid datastream id (?)\n");
+                }
+
+
+                if (!ps_loaded) {
+                        return false;
+                }
+
+                std::ostringstream s2;
+
+                if (start == 0 && end == 0) {
+                        
+                        // Get all photos
+
+                        s2 << "SELECT UNIX_TIMESTAMP(`datetime`),`filename` FROM `photos` WHERE `photostream`=";
+                        s2 << id;
+                        s2 << " ORDER BY `datetime`;";
+
+                } else {
+
+                        // Get photos in datetime range
+
+                        s2 << "SELECT UNIX_TIMESTAMP( `datetime` ) , `value`\n"
+                                "FROM `photos`\n"
+                                "WHERE `photostream` =" << id << " \n"
+                                "AND (\n"
+                                "UNIX_TIMESTAMP( `datetime` )\n"
+                                "BETWEEN " << start <<  " \n"
+                                "AND " << end << " \n"
+                                ");";
+                }
+
+                const std::string& q2 = s2.str();
+                
+                if(mysql_real_query(mMysql, q2.data(), q2.size()) == 0) { // success
+                        
+                        MYSQL_ROW row;
+                        MYSQL_RES * res = 0;
+                        my_ulonglong num_rows = 0;
+                        
+                        res = mysql_store_result(mMysql);
+                        num_rows = mysql_num_rows(res);
+                        
+                        while ((row = mysql_fetch_row(res)) != NULL) {
+                                // Get PhotoInfo
+                                if (row[0] && row[1]) { // datetime and value
+                                        
+                                        PhotoInfo info;
+                                        info.datetime = atoi(row[0]);
+                                        char * filename = row[1];
+                                        if (filename && strlen(filename) < 512) {
+                                                strcpy(info.filename, filename);
+                                        } else {
+                                                fprintf(stderr, "loadPhotostream error, invalid filename.\n");
+                                        }
+                                         
+                                        photostream->append(info);
+                                } else {
+                                        if (!row[0]) {
+                                                fprintf(stderr, "'datetime' doesn't exist in this datapoint row...\n");
+                                        } else if (!row[1]) {
+                                                //fprintf(stderr, "end row A\n");
+                                        }
+                                }
+                                
+                        } // end while
+                        mysql_free_result(res);
+                } else {
+                        fprintf(stderr, "loadDatastreamFromRange error, invalid query.\n");
+                }
+        }
+       
+        
+        return true;
+}               
+ 
 bool DB::isConnected() const {
         return !!mMysql;
 }

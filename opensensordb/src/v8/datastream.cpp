@@ -1,3 +1,4 @@
+
 #include "datastream.h"
 
 #include "db.h"
@@ -86,8 +87,8 @@ Handle<Array> Datastream::toV8Array(Isolate * i) const {
         return datapoints_array;
 }
 
-Handle<Array> Datastream::toV8ArrayContiguous(Isolate * i) {
-        //std::cout << "toV8ArrayContiguous"  << std::endl;
+Handle<Array> Datastream::toV8ArrayContiguous(Isolate * i) const {
+        std::cout << "toV8ArrayContiguous: datarows.size(): " << datarows.size() << std::endl;
         
         const std::vector<Datastream::Datarow*>& datarows = this->datarows;
         
@@ -105,7 +106,8 @@ Handle<Array> Datastream::toV8ArrayContiguous(Isolate * i) {
                         const Datapoint& d = (*itb);
                         
                         Handle<Array> pair_array = Array::New(i, 2);
-                        pair_array->Set(0, String::NewFromUtf8(i, d.strtime));
+                        //pair_array->Set(0, String::NewFromUtf8(i, d.strtime));
+                        pair_array->Set(0, Number::New(i, d.time));
                         pair_array->Set(1, Number::New(i, d.value));
                         
                         rows_array->Set(datapoints_count, pair_array);
@@ -250,9 +252,10 @@ Handle<ObjectTemplate> Datastream::JS::GetNewTemplate(Isolate * i)
 
 void Datastream::JS::SetupObject(Local<Object> obj, const Datastream * d, Isolate* i)
 {
+        fprintf(stderr, "Datastream::JS::SetupObject()");
 
         if (!d) {
-                fprintf(stderr, "Datastream::JS::SetupObject error, Datastream is null");
+                fprintf(stderr, "Datastream::JS::SetupObject error, Datastream is null\n");
                 return;
         }
 
@@ -260,7 +263,8 @@ void Datastream::JS::SetupObject(Local<Object> obj, const Datastream * d, Isolat
         obj->Set(String::NewFromUtf8(i, "ownerId"), Number::New(i, d->ownerId));
         obj->Set(String::NewFromUtf8(i, "name"), String::NewFromUtf8(i, d->name));
 
-        Handle<Array> array = d->toV8Array(i);
+        //Handle<Array> array = d->toV8Array(i);
+        Handle<Array> array = d->toV8ArrayContiguous(i);
         obj->Set(String::NewFromUtf8(i, "datapoints"), array);
 
         //obj->Set(String::NewFromUtf8(i, "select"), FunctionTemplate::New(i, Select));
@@ -314,11 +318,11 @@ void Datastream::JS::Load(const FunctionCallbackInfo<Value>& info)
         const Handle<Value>& arg3 = info[2];
 
         bool has_id = !arg1.IsEmpty();
-        bool has_date = !arg2.IsEmpty() && !arg3.IsEmpty();
+        bool has_date_interval = arg2->IsDate() && arg3->IsDate();
                 
-        if (has_id && has_date) {
+        if (has_id) {
                 const int datastream_id = arg1->Int32Value();
-                if (has_date) {
+                if (has_date_interval) {
                         // Get only data between the interval
                         const double start_t = arg2->NumberValue();
                         const long start_ut = (long)start_t / 1000;

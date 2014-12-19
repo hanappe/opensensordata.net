@@ -6,8 +6,11 @@
 
 #include <iostream>
 
-char* server_execute_script(const char* code, list_t* args, char** content_type);
-void server_free_result(char* buffer);
+
+#include "jsv8.h"
+
+//char* server_execute_script(const char* code, list_t* args, char** content_type);
+//void server_free_result(char* buffer);
 
 // ----
 // Using V8
@@ -71,21 +74,47 @@ void response_error(response_t* response, int status)
 {
         response_clear(response);
         response->status = status;
+
+
 }
 
 void response_bad_request(response_t* response)
 {
         response_error(response, 400);
+
+        response_content_type(response, " text/html");
+
+        const char* body = "Bad Request\r\n"; 
+        response->body = strdup(body);
+        response->length = strlen(body);
+        response->mybuf = 1;
+        response->freebuf = server_free_result;
 }
 
 void response_not_found(response_t* response)
 {
         response_error(response, 404);
+
+        response_content_type(response, " text/html");
+
+        const char* body = "Not Found\r\n"; 
+        response->body = strdup(body);
+        response->length = strlen(body);
+        response->mybuf = 1;
+        response->freebuf = server_free_result;
 }
 
 void response_internal_error(response_t* response)
 {
         response_error(response, 500);
+
+        response_content_type(response, " text/html");
+
+        const char* body = "Internall Error\r\n"; 
+        response->body = strdup(body);
+        response->length = strlen(body);
+        response->mybuf = 1;
+        response->freebuf = server_free_result;
 }
 
 void server_handle_script(request_t* request, response_t* response)
@@ -93,26 +122,31 @@ void server_handle_script(request_t* request, response_t* response)
         list_t* l = request->pathnodes;
         l = list_next(l);
         if (l == NULL) {
+                fprintf(stdout, "Debug bad a\n");
                 response_bad_request(response);
                 return;
         }
+ 
         const char* account = (const char*) list_get(l);
-        
+
         l = list_next(l);
         if (l == NULL) {
+                fprintf(stdout, "Debug bad b\n");
                 response_bad_request(response);
                 return;
         }
+
         const char* script = (const char*) l->data;
 
         if (!request->method == HTTP_GET) {
+                fprintf(stdout, "Debug bad c\n");
                 response_bad_request(response);
                 return;
         }
 
         char* code;
-        int r = filemanager_get_script(account, script, &code);
-        
+        int r = filemanager_get_script(account, script, &code);        
+
         if (r == -1) {
                 response_bad_request(response);
                 return;
@@ -130,7 +164,6 @@ void server_handle_script(request_t* request, response_t* response)
         char* result = server_execute_script(code, request->args, &content_type);
 
         filemanager_release_script(code);
-
 
         int len = result ? strlen(result) : 0;
 
@@ -157,6 +190,7 @@ void server_handle_script(request_t* request, response_t* response)
 
 void server_handle_request(request_t* request, response_t* response)
 {
+
         list_t* l = request->pathnodes;
         
         if (l == NULL) { // root of web site
@@ -168,10 +202,17 @@ void server_handle_request(request_t* request, response_t* response)
 
         const char* node = (const char*) l->data;
 
+
+        fprintf(stderr, "server_handler.c node: %s\n", node);
         if (strcmp(node, "scripts") == 0) {
+
                 server_handle_script(request, response);
+
         } else if (strcmp(node, "datastream") == 0) {
 
+        } else {
+                response_bad_request(response);
         }
+
 }
 

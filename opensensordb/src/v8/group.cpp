@@ -1,29 +1,43 @@
+
 #include "group.h"
 
 #include "db.h"
 #include "datastream.h"
 #include "photostream.h"
 
-Group::Group(int i) : id(i) {
+Group::Group(int i) : id(i)
+{
+
 }
 
-Group::~Group() {
+Group::~Group()
+{
         //clear();
 }
 
-bool Group::load(int id) {
+bool Group::load(int id)
+{
         clear();
         return DB::GetInstance()->loadGroup(this, id);
 }
 
-void Group::print() {
+bool Group::loadFromRange(int id, time_t start, time_t end)
+{
+        clear();
+        return DB::GetInstance()->loadGroupFromRange(this, id, start, end);
+}
+
+void Group::print()
+{
         std::cout << "Group[id: " << id
                   << " ownerId " << ownerId
                   << " name " << name
                   << "]"<< std::endl;
 }
 
-void Group::clear() {
+void Group::clear()
+{
+
         //for (std::vector<Datastream*>::iterator it = datastreams.begin(); it != datastreams.end(); ++it) {
         //        delete (*it);
         //}
@@ -31,6 +45,9 @@ void Group::clear() {
         //for (std::vector<Photostream*>::iterator it = photostreams.begin(); it != photostreams.end(); ++it) {
         //        delete (*it);
         //}
+
+        datastreams.clear();
+        photostreams.clear();
 
 }
 
@@ -172,18 +189,33 @@ void Group::JS::Load(const FunctionCallbackInfo<Value>& info ) {
         Group * group = static_cast<Group*>(ptr);
 
         const Handle<Value>& arg1 = info[0]; 
-        
-        const int group_id = !arg1.IsEmpty() ? arg1->Int32Value() : 0;
+        const Handle<Value>& arg2 = info[1];
+        const Handle<Value>& arg3 = info[2];
 
-        // Fill cpp object from database
+        bool has_id = !arg1.IsEmpty();
+        bool has_date_interval = arg2->IsDate() && arg3->IsDate();
 
-        group->load(group_id);
+        if (has_id) {
+                const int group_id = arg1->Int32Value();
+                if (has_date_interval) {
+                        // Get only data between the interval
+                        const double start_t = arg2->NumberValue();
+                        const long start_ut = (long)start_t / 1000;
+                        const double end_t = arg3->NumberValue();
+                        const long end_ut = (long)end_t / 1000;
 
-        Group::JS::SetupObject(info.This(), group, i);
+                        group->loadFromRange(group_id, start_ut, end_ut);
+                } else {
+                        // Get all data
+                        group->load(group_id);
+                }
+                // Fill this "Group" javascript object With properties         
+                Group::JS::SetupObject(info.This(), group, i);
+        }
 
-        return;
+        /*        
         // Fill javascript object
-
+          
         const std::vector<Datastream*>& datastreams = group->datastreams;
         
         Handle<Array> datastreams_array = Array::New(i, datastreams.size());
@@ -217,6 +249,8 @@ void Group::JS::Load(const FunctionCallbackInfo<Value>& info ) {
         //group->toObject(info.This(), isolate);
 
         info.This()->Set(String::NewFromUtf8(i, "datastreams"), datastreams_array);
+        
+        */
 }
 
 

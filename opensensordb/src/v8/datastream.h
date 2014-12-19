@@ -1,3 +1,4 @@
+
 #ifndef DATASTREAMV8_H
 #define DATASTREAMV8_H
 
@@ -58,7 +59,7 @@ public:
         Handle<Array> select2(Isolate * i, time_t start, time_t end) const;
 
 	Handle<Array> toV8Array(Isolate * i) const;
-        Handle<Array> toV8ArrayContiguous(Isolate * i);
+        Handle<Array> toV8ArrayContiguous(Isolate * i) const;
 
         // Simple way
 

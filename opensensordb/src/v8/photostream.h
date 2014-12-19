@@ -55,8 +55,9 @@ public:
 	~Photostream();
 
         bool load(int id);
-	void print() const;
+        bool loadFromRange(int id, time_t start, time_t end);
 
+	void print() const;
 	void clear();
 
         void append(const PhotoInfo& photo);

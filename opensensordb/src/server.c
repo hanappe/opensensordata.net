@@ -1007,9 +1007,10 @@ int main(int argc, char **argv)
         while (serverSocket != -1) {
 
                 int client = serverSocketAccept(serverSocket);
-                if (client == -1)
+                if (client == -1) {
                         continue;
-                
+                }
+
                 int r = parseRequest(client, &req, &resp);
                 if (r != 0) {
                         clientPrintf(client, "HTTP/1.1 %03d\r\n", resp.status);
@@ -1036,13 +1037,21 @@ int main(int argc, char **argv)
 
                 server_handle_request(&req, &resp);
 
-                clientPrintf(client, 
-                             "HTTP/1.1 %03d\r\n"
-                             "Content-Length: %d\r\n"
-                             "Content-Type: %s\r\n"
-                             "\r\n", 
-                             resp.status, resp.length, resp.content_type);
-                clientWrite(client, resp.body, resp.length);
+                // Debug printf
+                
+                if (resp.status != 0) {
+                        clientPrintf(client, 
+                                     "HTTP/1.1 %03d\r\n"
+                                     "Content-Length: %d\r\n"
+                                     "Content-Type: %s\r\n"
+                                     "\r\n", 
+                                     resp.status, resp.length, resp.content_type);
+
+                        clientWrite(client, resp.body, resp.length);
+                        
+                } else {
+                        log_err("main.c, request status == 0, request not handle!");
+                }
 
                 closeClient(client);
                 

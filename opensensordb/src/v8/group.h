@@ -30,6 +30,8 @@ public:
 	~Group();
 
         bool load(int id);
+        bool loadFromRange(int id, time_t start, time_t end);
+
 	void print();
 	void clear();
 
